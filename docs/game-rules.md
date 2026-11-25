@@ -64,6 +64,7 @@ in a row. There are two kinds of line.
   win.
 - In all, there are 228 winning lines: 108 rings, 72 diagonals and 48 on corner Vs. The first 180
   come from a model script written during the interview. The engine's tests confirm all 228.
+  Every line is listed in [winning-lines.md](winning-lines.md).
 
 ## Chaos cells
 
