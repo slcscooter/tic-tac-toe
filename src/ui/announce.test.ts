@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cell, LINES } from '../engine/cube';
+import { cell, CELL_COUNT, cellName, LINES } from '../engine/cube';
 import type { Turn } from '../engine/cube';
 import { newGame, placeMark } from '../engine/game';
 import type { Cell, GameState, Mark } from '../engine/game';
@@ -66,6 +66,15 @@ describe('describeMove', () => {
     const said = describeMove(prev, placeMark(prev, last), YOU_X).spoken;
     expect(said).toMatch(/^You played X at .*\. You win with /);
     for (const n of names.split(', ')) expect(said).toContain(n);
+  });
+
+  it('names the whole run when a move makes 6 in a row, not just the first 5', () => {
+    // Scott's win on 2026-11-24, across a cube edge, with Left 1 played last.
+    const six = ['Left 9', 'Left 5', 'Left 1', 'Back 3', 'Back 5', 'Back 7'];
+    const at = (name: string) => Array.from({ length: CELL_COUNT }, (_, i) => i).find(i => cellName(i) === name)!;
+    const prev = game({ X: six.filter(n => n !== 'Left 1').map(at) });
+    const said = describeMove(prev, placeMark(prev, at('Left 1')), YOU_X).spoken;
+    expect([six, [...six].reverse()].map(r => `You win with ${r.join(', ')}.`)).toContain(said.slice(said.indexOf('You win')));
   });
 });
 

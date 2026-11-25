@@ -11,7 +11,7 @@
 // Everything is laid out folded, so at progress 0 the net matches the cube exactly.
 
 import { Group, Object3D, Quaternion, Vector3 } from 'three';
-import { CELL_COUNT, cellPosition, FACES, LINES, stickerOf } from '../engine/cube';
+import { CELL_COUNT, cellPosition, FACES, LINES, stickerOf, WIN_LENGTH } from '../engine/cube';
 import type { Vec3 } from '../engine/cube';
 
 const HALF = 1.5; // the cube's surface is 1.5 from its centre: 3 blocks of 1
@@ -49,7 +49,7 @@ function faceRun(line: readonly number[]): number[] {
  */
 export function netPlan(line: readonly number[]): NetPlan {
   const run = faceRun(line);
-  if (CORNER_LINES.has(line.join(','))) return hangRest(cornerRoot(line), [run[0], run[1]]);
+  if (CORNER_LINES.has(line.slice(0, WIN_LENGTH).join(','))) return hangRest(cornerRoot(line), [run[0], run[1]]);
   const count = (f: number) => line.filter(c => cellPosition(c).face === f).length;
   // The middle of the run; between two middles, the one with more of the line.
   const mid = (run.length - 1) / 2;
@@ -167,7 +167,7 @@ function build(plan: NetPlan): Net {
   };
 }
 
-/** The net for a winning line. */
+/** The net for a winning line, or a longer run of overlapping lines along one ring, diagonal or V. */
 export function buildNet(line: readonly number[]): Net {
   return build(netPlan(line));
 }

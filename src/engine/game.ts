@@ -1,7 +1,7 @@
 // Game rules for the Chaos Cube. Rules of record: docs/game-rules.md.
 // Every function here is pure: it returns a new state and never changes the one it was given.
 
-import { applyTurn, CELL_COUNT, cellIndex, FACES, LINES, TURNS } from './cube';
+import { applyTurn, CELL_COUNT, cellIndex, cellPosition, FACES, LINES, TURNS, WIN_LENGTH } from './cube';
 import type { Line, Turn } from './cube';
 import { nextInt } from './random';
 
@@ -88,6 +88,37 @@ export function outcome(cells: readonly Cell[]): Outcome {
   if (players.length === 1) return { status: 'won', winner: players[0], winningLines: lines };
   if (cells.every(c => c.mark !== null)) return { status: 'draw', winner: null, winningLines: [] };
   return { status: 'playing', winner: null, winningLines: [] };
+}
+
+/**
+ * The winner's longest unbroken run, in order along its line, for showing and announcing the win.
+ * Usually that is one line of 5. A longer run holds several overlapping lines (6 in a row holds 2),
+ * and this joins them, so the whole run is drawn and named, not just its first 5.
+ *
+ * Lines along the same ring, diagonal or V run the same way, so each line's last 4 cells are the
+ * next line's first 4. A run stops before it would come back onto a face it has left, so it still
+ * lies straight when the cube unfolds. Only 11 in a row around a ring, which only chaos could make,
+ * gets that far, and then the run shown is 10.
+ */
+export function winningRun(state: GameState): readonly number[] | null {
+  if (state.status !== 'won') return null;
+  const mine = state.winningLines.filter(l => state.cells[l.cells[0]].mark === state.winner);
+  const key = (cells: readonly number[]) => cells.join(',');
+  const byHead = new Map(mine.map(l => [key(l.cells.slice(0, WIN_LENGTH - 1)), l]));
+  const face = (c: number) => cellPosition(c).face;
+
+  let best: number[] = [];
+  for (const start of mine) {
+    const run = [...start.cells];
+    for (let line = byHead.get(key(start.cells.slice(1))); line; line = byHead.get(key(line.cells.slice(1)))) {
+      const next = line.cells[WIN_LENGTH - 1];
+      const leftFace = face(next) !== face(run[run.length - 1]) && run.some(c => face(c) === face(next));
+      if (run.includes(next) || leftFace) break;
+      run.push(next);
+    }
+    if (run.length > best.length) best = run;
+  }
+  return best;
 }
 
 /** Picks one random turn. Tests replace this to force a particular turn. */

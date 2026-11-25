@@ -3,6 +3,7 @@
 
 import { cellName, describeTurn, whereAfter } from '../engine/cube';
 import type { HintReason } from '../engine/ai';
+import { winningRun } from '../engine/game';
 import type { GameState, Mark } from '../engine/game';
 
 export type Mode = 'ai' | 'two';
@@ -87,8 +88,7 @@ export function resultMessage(state: GameState, p: Players): string {
       : 'Draw: the board is full.';
   }
   const winner = state.winner!;
-  const line = state.winningLines.find(l => state.cells[l.cells[0]].mark === winner)!;
-  const cells = line.cells.map(cellName).join(', ');
+  const cells = winningRun(state)!.map(cellName).join(', ');
   const byChaos = state.lastMove?.chaos && state.lastMove.player !== winner ? 'Chaos finished the line. ' : '';
   const headline =
     p.mode === 'two' ? `${winner} wins` : isAi(winner, p) ? 'The AI wins' : 'You win';

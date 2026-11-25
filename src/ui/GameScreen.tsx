@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { whereAfter } from '../engine/cube';
+import { winningRun } from '../engine/game';
 import { Board } from './Board';
 import type { BoardCommand } from './Board';
 import { hasWebGL } from './webgl';
@@ -37,8 +38,7 @@ export function GameScreen(props: GameScreenProps) {
   const marks = game.cells.map(c => c.mark);
   const move = game.lastMove;
   const landed = move ? whereAfter(move.index, move.chaos?.turns ?? []) : null;
-  const winLine =
-    game.status === 'won' ? (game.winningLines.find(l => game.cells[l.cells[0]].mark === game.winner)?.cells ?? null) : null;
+  const winLine = winningRun(game);
   const unfolded = foldedFor !== game;
 
   // A click on the cube places a mark. In accessible mode, keyboard focus follows it.
