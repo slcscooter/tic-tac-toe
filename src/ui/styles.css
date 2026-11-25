@@ -1,0 +1,200 @@
+/* Chaos Cube. Marks are letters, never color alone; winning cells also say so in their labels. */
+
+:root {
+  --bg: #ffffff;
+  --text: #1a1a1a;
+  --muted: #4a4a4a;
+  --cell-bg: #f4f4f4;
+  --cell-border: #767676;
+  --x: #0b4f9c;
+  --o: #a3122a;
+  --win-bg: #ffe066;
+  --focus: #1a1a1a;
+  --button-bg: #1a1a1a;
+  --button-text: #ffffff;
+  /* 12 cells across the widest row of the cross, plus about 80px of padding and gaps. */
+  --cell: clamp(20px, calc((100vw - 80px) / 12), 46px);
+
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121212;
+    --text: #f0f0f0;
+    --muted: #c4c4c4;
+    --cell-bg: #262626;
+    --cell-border: #9a9a9a;
+    --x: #8cc4ff;
+    --o: #ff9aa8;
+    --win-bg: #4d3e00;
+    --focus: #f0f0f0;
+    --button-bg: #f0f0f0;
+    --button-text: #121212;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 24px 0 8px;
+}
+
+h1:focus {
+  outline: none;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.actions button,
+.help > button {
+  padding: 8px 16px;
+  border: 2px solid var(--button-bg);
+  border-radius: 6px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 600;
+}
+
+button[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.actions button[aria-disabled='true'] {
+  background: transparent;
+  color: var(--text);
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+fieldset {
+  border: 1px solid var(--cell-border);
+  border-radius: 6px;
+  margin: 12px 0;
+  padding: 8px 12px;
+}
+
+fieldset label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 16px;
+}
+
+.status,
+.hint {
+  font-weight: 600;
+}
+
+/* The unfolded cross: 4 columns and 3 rows of faces. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  grid-template-rows: repeat(3, auto);
+  justify-content: start;
+  gap: 6px;
+  margin: 16px 0;
+}
+
+.face-top { grid-column: 2; grid-row: 1; }
+.face-left { grid-column: 1; grid-row: 2; }
+.face-front { grid-column: 2; grid-row: 2; }
+.face-right { grid-column: 3; grid-row: 2; }
+.face-back { grid-column: 4; grid-row: 2; }
+.face-bottom { grid-column: 2; grid-row: 3; }
+
+.face-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.face-cells {
+  display: grid;
+  grid-template-columns: repeat(3, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: 2px;
+}
+
+.cell {
+  padding: 0;
+  border: 1px solid var(--cell-border);
+  border-radius: 3px;
+  background: var(--cell-bg);
+  color: var(--text);
+  font-size: calc(var(--cell) * 0.5);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cell.mark-X { color: var(--x); }
+.cell.mark-O { color: var(--o); }
+
+.cell.winning {
+  background: var(--win-bg);
+  border: 3px solid var(--text);
+}
+
+.cell[aria-disabled='true'] {
+  cursor: default;
+}
+
+.moves ol {
+  max-height: 16rem;
+  overflow-y: auto;
+  padding-left: 1.5rem;
+  margin: 0;
+}
+
+.moves li {
+  margin-bottom: 4px;
+}

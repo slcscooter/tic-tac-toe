@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseMove, seededRandom, toAiView, winningCells } from './ai';
+import { chooseMove, hint, seededRandom, toAiView, winningCells } from './ai';
 import type { AiView, Level } from './ai';
 import { CELL_COUNT, LINES } from './cube';
 import { newGame, placeMark } from './game';
@@ -171,5 +171,25 @@ describe('strength', () => {
 
   it('Hard beats Medium most of the time', () => {
     expect(wins('hard', 'medium', 10)).toBeGreaterThanOrEqual(0.6);
+  });
+});
+
+describe('hint', () => {
+  it('says win when the move completes your line', () => {
+    const v = view(RING.cells.slice(1), OTHER_RING.cells.slice(0, 2));
+    expect(hint(v, seededRandom(1))?.reason).toBe('win');
+  });
+
+  it('says block when the move stops their line', () => {
+    const theirFour = OTHER_RING.cells.slice(1);
+    const [gap, held] = winningCells(view([], theirFour).marks, 'O');
+    const v = view([held, ...RING.cells.slice(0, 2)], theirFour);
+    expect(hint(v, seededRandom(1))).toEqual({ cell: gap, reason: 'block' });
+  });
+
+  it('says build otherwise, and gives nothing on a full board', () => {
+    expect(hint(view([0], [30]), seededRandom(1))?.reason).toBe('build');
+    const all = Array.from({ length: CELL_COUNT }, (_, i) => i);
+    expect(hint(view(all.filter(i => i % 2), all.filter(i => !(i % 2))), seededRandom(1))).toBeNull();
   });
 });

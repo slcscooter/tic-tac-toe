@@ -137,6 +137,11 @@ export function applyTurn<T>(cells: readonly T[], turn: Turn): T[] {
   return out;
 }
 
+/** Where the content of cell `index` ends up after the turns, in order. */
+export function whereAfter(index: number, turns: readonly Turn[]): number {
+  return turns.reduce((at, t) => PERMUTATIONS.get(turnKey(t))![at], index);
+}
+
 export function inverseTurn(turn: Turn): Turn {
   return { ...turn, quarter: turn.quarter === 1 ? -1 : 1 };
 }

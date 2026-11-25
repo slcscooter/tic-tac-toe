@@ -15,6 +15,7 @@ import {
   tracks,
   TURNS,
   turnPermutation,
+  whereAfter,
 } from './cube';
 import type { Turn } from './cube';
 
@@ -168,5 +169,16 @@ describe('winning lines', () => {
 
   it('counts a diagonal that crosses from Top over Front onto Right', () => {
     expect(has([cell('top', 2, 0), cell('front', 0, 1), cell('front', 1, 2), cell('right', 2, 0)])).toBe(true);
+  });
+});
+
+describe('whereAfter', () => {
+  it('follows a cell through several turns', () => {
+    const turns = [FRONT_CW, TOP_CW];
+    const start = cell('top', 2, 0);
+    // Front clockwise takes Top 7 to Right 1, then Top clockwise takes Right 1 to Front 1.
+    expect(whereAfter(start, [FRONT_CW])).toBe(cell('right', 0, 0));
+    expect(whereAfter(start, turns)).toBe(cell('front', 0, 0));
+    expect(whereAfter(start, [])).toBe(start);
   });
 });

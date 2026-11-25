@@ -175,3 +175,21 @@ export function chooseMove(view: AiView, level: Level, random: Random): number |
     random,
   );
 }
+
+export type HintReason = 'win' | 'block' | 'build';
+
+export interface Hint {
+  readonly cell: number;
+  /** win: completes your line now. block: stops their line. build: Hard's best move. */
+  readonly reason: HintReason;
+}
+
+/** A suggested move for the player to move, from Hard's point of view. Never sees chaos. */
+export function hint(view: AiView, random: Random): Hint | null {
+  const wins = winningCells(view.marks, view.me);
+  const cellChoice = chooseMove(view, 'hard', random);
+  if (cellChoice === null) return null;
+  if (wins.includes(cellChoice)) return { cell: cellChoice, reason: 'win' };
+  if (winningCells(view.marks, other(view.me)).includes(cellChoice)) return { cell: cellChoice, reason: 'block' };
+  return { cell: cellChoice, reason: 'build' };
+}
