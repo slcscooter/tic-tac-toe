@@ -32,3 +32,6 @@ dist-ssr
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+# Screenshots and traces from the Playwright MCP server (.mcp.json).
+test-artifacts/
