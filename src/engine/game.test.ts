@@ -90,8 +90,8 @@ describe('placing a mark', () => {
   });
 
   it('is a draw when the board fills with no line', () => {
-    // Found by a seeded search: 27 X and 27 O with no 5 in a row anywhere.
-    const full = 'OXOOOXOXXXXOOOOXXXXXOXXXOXOOOXXOOOXXXOXOXXXOOXOOOXOOXO';
+    // Found by a seeded search: 27 X and 27 O with no 5 in a row anywhere, corner Vs included.
+    const full = 'OXOOXXXOOOXOXOXXOXOOXXXOOOOOXXOOXXXXOOXOXXOXXXOXOXOOOX';
     const X = [...full].flatMap((m, i) => (m === 'X' ? [i] : []));
     const O = [...full].flatMap((m, i) => (m === 'O' ? [i] : []));
     const last = X.pop()!;

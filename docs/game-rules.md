@@ -53,11 +53,17 @@ in a row. There are two kinds of line.
 - **Diagonals.** A 45-degree diagonal continues across a cube edge onto the next face. These
   diagonals close into 8 loops of 9 cells. A run of 5 covers 3 or 4 faces. That gives 72 winning
   lines.
-- **A diagonal stops at a cube corner**, where 3 faces meet. Each face's two corner-to-corner
-  diagonals run into a cube corner at both ends, so they are only 3 cells long and can never win.
-  So a face's center cell can only win along a straight ring.
-- In all, there are 180 winning lines. These counts come from a model script written during the
-  interview. The engine's tests must confirm them.
+- **Corner Vs.** Each face's two corner-to-corner diagonals run into a cube corner at both ends,
+  where 3 faces meet, so a straight diagonal stops there. Instead, a corner-to-corner diagonal turns
+  through the corner onto the corner-to-corner diagonal of either other face at that corner, making
+  a V of 6 cells: for example Left 1, 5, 9 then Bottom 1, 5, 9. Any 5 in a row along a V wins.
+  Laid flat around the third face at that corner, a V is one straight diagonal. 8 corners with 3
+  pairs of faces make 24 Vs, and each V holds 2 runs of 5: 48 winning lines, each over 2 faces.
+  Scott chose this on 2026-11-24 after a play test where his V didn't win, picking any 5 in a row
+  and any two of the three faces at a corner. Until then the rules said these diagonals could never
+  win.
+- In all, there are 228 winning lines: 108 rings, 72 diagonals and 48 on corner Vs. The first 180
+  come from a model script written during the interview. The engine's tests confirm all 228.
 
 ## Chaos cells
 

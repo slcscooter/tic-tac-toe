@@ -6,12 +6,14 @@ import {
   cellIndex,
   cellName,
   cellPosition,
+  cornerVs,
   describeTurn,
   facesCovered,
   inverseTurn,
   isClockwise,
   LINES,
   neighbor,
+  stickerOf,
   tracks,
   TURNS,
   turnPermutation,
@@ -112,6 +114,7 @@ describe('neighbors across cube edges', () => {
 describe('winning lines', () => {
   const rings = LINES.filter(l => l.kind === 'ring');
   const diagonals = LINES.filter(l => l.kind === 'diagonal');
+  const corners = LINES.filter(l => l.kind === 'corner');
   const has = (cells: number[]) =>
     LINES.some(l => cells.every(c => l.cells.includes(c)));
 
@@ -133,33 +136,58 @@ describe('winning lines', () => {
   it('stops each face corner-to-corner diagonal at the cube corners, 3 cells long', () => {
     const dead = tracks('diagonal').filter(t => !t.closed);
     expect(dead.map(t => t.cells.length)).toEqual(Array(12).fill(3));
-    expect(has([cell('front', 0, 0), cell('front', 1, 1)])).toBe(false);
-    expect(has([cell('front', 1, 1), cell('front', 2, 2)])).toBe(false);
-    expect(has([cell('front', 0, 2), cell('front', 1, 1)])).toBe(false);
   });
 
-  it('puts face centers on rings only, never on a winning diagonal', () => {
+  it('carries each corner-to-corner diagonal through the corner into a V: 24 Vs, giving 48 lines over 2 faces', () => {
+    const vs = cornerVs();
+    expect(vs).toHaveLength(24);
+    for (const v of vs) {
+      expect(v).toHaveLength(6);
+      // The two halves meet on one corner block: all three coordinates are +-1.
+      const [a, b] = [stickerOf(v[2]).p, stickerOf(v[3]).p];
+      expect(a).toEqual(b);
+      expect(a.every(x => Math.abs(x) === 1)).toBe(true);
+    }
+    expect(corners).toHaveLength(48);
+    expect(corners.every(l => facesCovered(l) === 2)).toBe(true);
+  });
+
+  it('puts face centers on rings and corner Vs, never on a diagonal that crosses an edge', () => {
     const centers = [0, 1, 2, 3, 4, 5].map(f => cellIndex(f, 1, 1));
     expect(diagonals.some(l => l.cells.some(c => centers.includes(c)))).toBe(false);
-    for (const c of centers) expect(rings.some(l => l.cells.includes(c))).toBe(true);
+    for (const c of centers) {
+      expect(rings.some(l => l.cells.includes(c))).toBe(true);
+      expect(corners.some(l => l.cells.includes(c))).toBe(true);
+    }
   });
 
-  it('has 180 different lines of 5 different cells', () => {
-    expect(LINES).toHaveLength(180);
+  it('has 228 different lines of 5 different cells', () => {
+    expect(LINES).toHaveLength(228);
     const ids = new Set(LINES.map(l => [...l.cells].sort((a, b) => a - b).join(',')));
-    expect(ids.size).toBe(180);
+    expect(ids.size).toBe(228);
     for (const l of LINES) expect(new Set(l.cells).size).toBe(5);
   });
 
   it('steps one cell at a time along each line', () => {
-    const steps = (kind: 'ring' | 'diagonal') =>
+    const steps = (kind: 'ring' | 'diagonal' | 'corner') =>
       kind === 'ring' ? [[0, 1], [0, -1], [1, 0], [-1, 0]] : [[1, 1], [1, -1], [-1, 1], [-1, -1]];
     for (const l of LINES) {
       for (let k = 1; k < l.cells.length; k++) {
         const reachable = steps(l.kind).map(([r, c]) => neighbor(l.cells[k - 1], r, c));
+        // A V's one turn goes between two faces of the same corner block, not by a step.
+        const sameBlock = String(stickerOf(l.cells[k - 1]).p) === String(stickerOf(l.cells[k]).p);
+        if (l.kind === 'corner' && sameBlock) continue;
         expect(reachable).toContain(l.cells[k]);
       }
     }
+  });
+
+  // Scott's V, from his play test on 2026-11-24, worked out on a real cube.
+  it("counts Scott's V: Left 1, 5, 9 turning through the corner onto Bottom 1, 5, 9", () => {
+    expect(has([cell('left', 0, 0), cell('left', 1, 1), cell('left', 2, 2), cell('bottom', 0, 0), cell('bottom', 1, 1)])).toBe(true);
+    expect(has([cell('left', 1, 1), cell('left', 2, 2), cell('bottom', 0, 0), cell('bottom', 1, 1), cell('bottom', 2, 2)])).toBe(true);
+    // A V of two diagonals that meet at no corner block is still not a line.
+    expect(has([cell('left', 0, 2), cell('left', 1, 1), cell('left', 2, 0), cell('bottom', 0, 0), cell('bottom', 1, 1)])).toBe(false);
   });
 
   // Worked out by hand from a real cube, independent of the code under test.

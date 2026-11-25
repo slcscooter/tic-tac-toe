@@ -191,7 +191,7 @@ export function describeTurn(turn: Turn): string {
 // ---------------------------------------------------------------------------------------------
 // Winning lines
 
-export type LineKind = 'ring' | 'diagonal';
+export type LineKind = 'ring' | 'diagonal' | 'corner';
 
 export interface Line {
   readonly kind: LineKind;
@@ -208,7 +208,8 @@ const normalAxis = (n: Vec3): Axis => (n[0] !== 0 ? 0 : n[1] !== 0 ? 1 : 2);
 /**
  * Moves one cell from `index` in direction `d` (doubled units, tangent to the cell's face),
  * unfolding across a cube edge when it crosses one. Returns null when the move runs into a cube
- * corner, where 3 faces meet: the rules say a line stops there.
+ * corner, where 3 faces meet: a straight step can't carry on there. Corner Vs, which do turn
+ * through a corner, are built separately (cornerVs).
  */
 function step(index: number, d: Vec3): { index: number; d: Vec3 } | null {
   const { p, n } = STICKERS[index];
@@ -270,7 +271,7 @@ export interface Track {
 }
 
 /** Every straight ring, or every diagonal, as a whole loop or corner-to-corner segment. */
-export function tracks(kind: LineKind): Track[] {
+export function tracks(kind: 'ring' | 'diagonal'): Track[] {
   const seen = new Set<string>();
   const out: Track[] = [];
   for (let i = 0; i < CELL_COUNT; i++) {
@@ -293,7 +294,7 @@ export function tracks(kind: LineKind): Track[] {
   return out;
 }
 
-function windows(kind: LineKind): Line[] {
+function windows(kind: 'ring' | 'diagonal'): Line[] {
   const seen = new Set<string>();
   const out: Line[] = [];
   for (const { cells: track, closed } of tracks(kind)) {
@@ -310,8 +311,37 @@ function windows(kind: LineKind): Line[] {
   return out;
 }
 
-/** Every winning line on the board: 108 along straight rings and 72 along diagonals. */
-export const LINES: readonly Line[] = [...windows('ring'), ...windows('diagonal')];
+/**
+ * Corner Vs. Each face's two corner-to-corner diagonals stop at cube corners. At a corner, the
+ * diagonal on one face carries on through the corner onto the diagonal of either other face there,
+ * making a V of 6 cells, as in Left 1, 5, 9 then Bottom 1, 5, 9. Scott chose this on 2026-11-24.
+ * Laid flat around the third face at that corner, a V is one straight diagonal. 8 corners with 3
+ * pairs of faces each make 24 Vs. Each V is in order along it, its two halves meeting at the corner.
+ */
+export function cornerVs(): number[][] {
+  const halves = tracks('diagonal')
+    .filter(t => !t.closed)
+    .map(t => t.cells);
+  const vs: number[][] = [];
+  for (let a = 0; a < halves.length; a++)
+    for (let b = a + 1; b < halves.length; b++)
+      for (const ea of [0, 2])
+        for (const eb of [0, 2]) {
+          if (key(STICKERS[halves[a][ea]].p) !== key(STICKERS[halves[b][eb]].p)) continue;
+          const intoCorner = ea === 2 ? halves[a] : [...halves[a]].reverse();
+          const outOfCorner = eb === 0 ? halves[b] : [...halves[b]].reverse();
+          vs.push([...intoCorner, ...outOfCorner]);
+        }
+  return vs;
+}
+
+/** Each V's two runs of 5. */
+function cornerLines(): Line[] {
+  return cornerVs().flatMap(v => [v.slice(0, WIN_LENGTH), v.slice(1)].map(cells => ({ kind: 'corner' as const, cells })));
+}
+
+/** Every winning line on the board: 108 along straight rings, 72 along diagonals, 48 on corner Vs. */
+export const LINES: readonly Line[] = [...windows('ring'), ...windows('diagonal'), ...cornerLines()];
 
 /** Number of different faces a line covers. */
 export function facesCovered(line: Line): number {

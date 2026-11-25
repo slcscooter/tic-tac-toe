@@ -11,7 +11,7 @@
 // Everything is laid out folded, so at progress 0 the net matches the cube exactly.
 
 import { Group, Object3D, Quaternion, Vector3 } from 'three';
-import { CELL_COUNT, cellPosition, FACES, stickerOf } from '../engine/cube';
+import { CELL_COUNT, cellPosition, FACES, LINES, stickerOf } from '../engine/cube';
 import type { Vec3 } from '../engine/cube';
 
 const HALF = 1.5; // the cube's surface is 1.5 from its centre: 3 blocks of 1
@@ -21,6 +21,7 @@ const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const adjacent = (a: number, b: number) => dot(FACES[a].normal, FACES[b].normal) === 0;
 const v3 = (v: Vec3) => new Vector3(...v);
 const ALL_FACES = FACES.map((_, f) => f);
+const CORNER_LINES = new Set(LINES.filter(l => l.kind === 'corner').map(l => l.cells.join(',')));
 
 export interface NetPlan {
   /** The face that stays put. */
@@ -41,11 +42,14 @@ function faceRun(line: readonly number[]): number[] {
 
 /**
  * How to unfold for this line: the line's faces in a chain from the middle one, then each other
- * face hung from the first face it touches that is already placed. A test checks that this lays
- * all 180 winning lines flat with no squares overlapping.
+ * face hung from the first face it touches that is already placed. A corner V instead unfolds
+ * around the third face at its corner, with its two faces hung either side: laid flat that way, the
+ * V is one straight diagonal through the corner. A test checks that this lays all 228 winning
+ * lines flat and straight with no squares overlapping.
  */
 export function netPlan(line: readonly number[]): NetPlan {
   const run = faceRun(line);
+  if (CORNER_LINES.has(line.join(','))) return hangRest(cornerRoot(line), [run[0], run[1]]);
   const count = (f: number) => line.filter(c => cellPosition(c).face === f).length;
   // The middle of the run; between two middles, the one with more of the line.
   const mid = (run.length - 1) / 2;
@@ -58,6 +62,27 @@ export function netPlan(line: readonly number[]): NetPlan {
     if (k < rootAt) parent[f] = run[k + 1];
     if (k > rootAt) parent[f] = run[k - 1];
   });
+  return finish(root, parent);
+}
+
+/** The face at a V's corner that holds none of the V: the third face meeting at that block. */
+function cornerRoot(line: readonly number[]): number {
+  const turnAt = line.findIndex((c, k) => k > 0 && cellPosition(c).face !== cellPosition(line[k - 1]).face);
+  const block = stickerOf(line[turnAt]).p;
+  const used = [line[turnAt - 1], line[turnAt]].map(c => cellPosition(c).face);
+  return ALL_FACES.find(f => !used.includes(f) && dot(FACES[f].normal, block) === 1)!;
+}
+
+/** The root, then `children` hung straight off it. */
+function hangRest(root: number, children: readonly number[]): NetPlan {
+  const parent: (number | null | undefined)[] = Array(FACES.length).fill(undefined);
+  parent[root] = null;
+  for (const f of children) parent[f] = root;
+  return finish(root, parent);
+}
+
+/** Hangs every face not yet placed from the first placed face it touches. */
+function finish(root: number, parent: (number | null | undefined)[]): NetPlan {
   for (const f of ALL_FACES.filter(g => parent[g] === undefined)) {
     parent[f] = ALL_FACES.find(p => parent[p] !== undefined && adjacent(f, p));
   }

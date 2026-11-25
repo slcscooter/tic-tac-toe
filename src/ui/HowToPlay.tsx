@@ -35,9 +35,9 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
       <h2>Winning lines</h2>
       <p>
         A face is only 3 cells wide, so every line of 5 crosses a cube edge. Lines run straight around the cube, the
-        way a row or column continues onto the next face, or along diagonals that cross an edge. A diagonal stops at a
-        cube corner, so a face&apos;s own corner-to-corner diagonal never wins, and a face center only wins along a
-        straight line.
+        way a row or column continues onto the next face, or along diagonals that cross an edge. A face&apos;s own
+        corner-to-corner diagonal turns at the cube corner onto the corner-to-corner diagonal of a face next to it,
+        making a V: Left 1, 5, 9 then Bottom 1, 5, 9 is one. Any 5 in a row along a V wins.
       </p>
 
       <h2>Chaos cells</h2>
