@@ -1,33 +1,42 @@
 // The 3D cube, drawn with three.js. Plain imperative code: CubeView.tsx owns one of these and
-// feeds it the board. Look follows Scott's cttt prototype: marble blocks, an X of two crossed bars
-// and an O ring, drag to spin, click a face to place, chaos turns animated as real slice turns.
+// feeds it the board. Play follows Scott's cttt prototype: an X of two crossed bars and an O ring,
+// drag to spin, click a face to place, chaos turns animated as real slice turns. The blocks follow
+// the MossyBlock picture Scott chose: solid lime glass with a mossy pattern and rounded edges.
 // Unlike the prototype, X and O differ in colour as well as shape, and everything is big and thick
 // for low vision. This scene is only ever given marks, never chaos cells.
 
 import {
   AmbientLight,
   BoxGeometry,
+  DataTexture,
   DirectionalLight,
   Group,
+  LinearMipmapLinearFilter,
   Matrix4,
   Mesh,
+  MeshPhysicalMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
   PlaneGeometry,
+  PMREMGenerator,
   Quaternion,
   Raycaster,
   Scene,
+  SRGBColorSpace,
   TorusGeometry,
   Vector2,
   Vector3,
   WebGLRenderer,
 } from 'three';
 import type { Material } from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { applyTurn, cellAt, CELL_COUNT, faceIndex, FACES, stickerOf } from '../engine/cube';
 import type { Turn, Vec3 } from '../engine/cube';
 import type { Mark } from '../engine/game';
 import { beforeTurns, faceViewDirection, fromAngles, toAngles, turnAngle } from './cube3d';
 import { buildNet } from './cubeNet';
+import { drawMoss, MOSS_BASE } from './moss';
 import type { Net } from './cubeNet';
 
 export interface CubeBoard {
@@ -42,6 +51,8 @@ export interface CubeBoard {
 }
 
 const BLOCK = 0.94; // block size; the gaps between blocks show the slices
+const ROUND = 0.06; // how rounded the block edges are; the flat face left still holds the whole cell
+const MOSS_SIZE = 256; // pixels across the moss pattern; each block face shows a quarter of it
 const DISTANCE = 8.6;
 const TURN_MS = 340;
 const UNFOLD_MS = 1800;
@@ -53,16 +64,55 @@ const DRAG_PX = 6; // movement past this turns a press into a drag, not a click
 const PHI_MIN = 0.5;
 const PHI_MAX = Math.PI - 0.5;
 
+// Contrast against the lime blocks: X 3.4 to 1, O 3.2, last move 4.4. The white win glow is 2.0,
+// so the black bar drawn through the line carries it; the yellow highlight relies on its black frame.
 const COLORS = {
-  marble: 0xe8dcc4,
   x: 0x1d4ed8,
   o: 0xbe123c,
   highlight: 0xfacc15,
   frame: 0x111111,
-  winning: 0x22c55e,
-  lastMove: 0xf97316,
+  winning: 0xffffff,
+  lastMove: 0x6b21a8,
   bar: 0x111111,
 };
+
+/** Solid lime glass: the moss pattern under a glossy clear coat, glowing faintly from inside. */
+function mossMaterials(renderer: WebGLRenderer): { materials: MeshPhysicalMaterial[]; disposables: { dispose(): void }[] } {
+  const map = new DataTexture(drawMoss(MOSS_SIZE), MOSS_SIZE, MOSS_SIZE);
+  map.colorSpace = SRGBColorSpace;
+  map.generateMipmaps = true;
+  map.minFilter = LinearMipmapLinearFilter;
+  map.needsUpdate = true;
+  // Something soft for the clear coat to reflect, so the blocks shine like glass from every side.
+  const pmrem = new PMREMGenerator(renderer);
+  const room = new RoomEnvironment();
+  const envMap = pmrem.fromScene(room, 0.04).texture;
+  room.dispose();
+  pmrem.dispose();
+  const disposables: { dispose(): void }[] = [envMap];
+  // Four views of the pattern, a quarter each, so neighbouring blocks don't look stamped.
+  const materials = [0, 1, 2, 3].map(k => {
+    const quarter = map.clone();
+    quarter.repeat.set(0.5, 0.5);
+    quarter.offset.set((k % 2) * 0.5, Math.floor(k / 2) * 0.5);
+    const m = new MeshPhysicalMaterial({
+      map: quarter,
+      roughness: 0.45,
+      metalness: 0,
+      clearcoat: 1,
+      clearcoatRoughness: 0.12,
+      envMap,
+      envMapIntensity: 0.2,
+      emissive: (MOSS_BASE[0] << 16) | (MOSS_BASE[1] << 8) | MOSS_BASE[2],
+      emissiveMap: quarter,
+      emissiveIntensity: 0.04,
+    });
+    disposables.push(quarter, m);
+    return m;
+  });
+  disposables.push(map);
+  return { materials, disposables };
+}
 
 /** Marks and highlights glow a little on their own, so they stay bold however the light falls. */
 const material = (color: number, roughness: number, glow: number) =>
@@ -90,9 +140,10 @@ export class CubeScene {
   private readonly cells: CellParts[] = [];
   /** Each cell's fill, frame and marks, laid on its block's face. They move onto tiles to unfold. */
   private readonly holders: Group[] = [];
-  private readonly slabGeo = new BoxGeometry(BLOCK, BLOCK, SLAB);
+  private readonly slabGeo = new RoundedBoxGeometry(BLOCK, BLOCK, SLAB, 3, ROUND);
   private readonly bar: Mesh;
   private readonly materials: Record<keyof typeof COLORS, MeshStandardMaterial>;
+  private readonly moss: MeshPhysicalMaterial[];
   private readonly disposables: { dispose(): void }[] = [];
   private readonly raycaster = new Raycaster();
 
@@ -135,9 +186,12 @@ export class CubeScene {
     this.reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
     this.materials = Object.fromEntries(
-      Object.entries(COLORS).map(([k, c]) => [k, k === 'marble' ? material(c, 0.75, 0) : material(c, 0.45, 0.35)]),
+      Object.entries(COLORS).map(([k, c]) => [k, material(c, 0.45, 0.35)]),
     ) as Record<keyof typeof COLORS, MeshStandardMaterial>;
     this.disposables.push(...Object.values(this.materials));
+    const moss = mossMaterials(this.renderer);
+    this.moss = moss.materials;
+    this.disposables.push(...moss.disposables);
 
     // Light that rides with the camera, from above and to the left, so whatever you look at is lit
     // and the three faces in view each get a clearly different shade.
@@ -247,18 +301,23 @@ export class CubeScene {
   // Building
 
   private buildBlocks() {
-    const geometry = new BoxGeometry(BLOCK, BLOCK, BLOCK);
+    const geometry = new RoundedBoxGeometry(BLOCK, BLOCK, BLOCK, 3, ROUND);
     this.disposables.push(geometry);
     for (const x of [-1, 0, 1])
       for (const y of [-1, 0, 1])
         for (const z of [-1, 0, 1]) {
           if (x === 0 && y === 0 && z === 0) continue; // the hidden core
-          const block = new Mesh(geometry, this.materials.marble);
+          const block = new Mesh(geometry, this.mossFor([x, y, z]));
           block.position.set(x, y, z);
           block.userData.home = [x, y, z];
           this.blocks.set(posKey([x, y, z]), block);
           this.scene.add(block);
         }
+  }
+
+  /** One of the four views of the moss pattern, picked by where a block starts out. */
+  private mossFor([x, y, z]: Vec3): MeshPhysicalMaterial {
+    return this.moss[(((x + 1) * 9 + (y + 1) * 3 + (z + 1)) * 7) % this.moss.length];
   }
 
   /** Each cell gets a fill, a frame, an X and an O, laid flat on its block's face and shown as needed. */
@@ -408,7 +467,7 @@ export class CubeScene {
     net.setProgress(0);
     this.scene.updateMatrixWorld(true);
     const slabs = net.anchors.map((anchor, i) => {
-      const slab = new Mesh(this.slabGeo, this.materials.marble);
+      const slab = new Mesh(this.slabGeo, this.mossFor(stickerOf(i).p));
       slab.position.z = -(0.5 - BLOCK / 2) - SLAB / 2; // outer face flush with the block's
       anchor.add(slab);
       anchor.attach(this.holders[i]);
@@ -519,8 +578,12 @@ export class CubeScene {
     this.raycaster.setFromCamera(ndc, this.camera);
     const hit = this.raycaster.intersectObjects([...this.blocks.values()], false)[0];
     if (!hit?.face) return null;
-    const n = hit.face.normal; // blocks sit unrotated between turns, so local is world
-    return cellAt(hit.object.userData.home as Vec3, [Math.round(n.x), Math.round(n.y), Math.round(n.z)]);
+    // Blocks sit unrotated between turns, so local is world. A click on a rounded rim slants, so it
+    // counts for the face it leans toward most.
+    const n = hit.face.normal.toArray();
+    const axis = n.reduce((best, v, k) => (Math.abs(v) > Math.abs(n[best]) ? k : best), 0);
+    const out = (k: number) => (k === axis ? Math.sign(n[axis]) : 0);
+    return cellAt(hit.object.userData.home as Vec3, [out(0), out(1), out(2)]);
   }
 
   private readonly onPointerDown = (e: PointerEvent) => {

@@ -20,7 +20,7 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
       <h2>The board</h2>
       <p>
         The board is a Rubik&apos;s cube with 6 faces of 9 cells, shown in 3D. Click or tap a square to place your
-        mark, and drag to turn the cube and see the other faces. The latest move has an orange outline. Cells are
+        mark, and drag to turn the cube and see the other faces. The latest move has a purple outline. Cells are
         numbered 1 to 9 on each face like a phone keypad, so Front 1 is the top left of Front and Front 5 its center.
         Left, Front, Right and Back are numbered with Top above them; Top with Front below it, and Bottom with Front
         above it.
