@@ -65,7 +65,8 @@ const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const scale = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
 const key = (v: Vec3): string => v.join(',');
 
-interface Sticker {
+/** Where a cell sits in space: its cubie position p and the unit normal n of its face. */
+export interface Sticker {
   readonly p: Vec3;
   readonly n: Vec3;
 }
@@ -79,6 +80,16 @@ function sticker(index: number): Sticker {
 
 const STICKERS: readonly Sticker[] = Array.from({ length: CELL_COUNT }, (_, i) => sticker(i));
 const BY_STICKER = new Map(STICKERS.map((s, i) => [key(s.p) + '|' + key(s.n), i]));
+
+/** Where cell `index` sits in space. The 3D view draws from this. */
+export function stickerOf(index: number): Sticker {
+  return STICKERS[index];
+}
+
+/** The cell at cubie position p on the face with normal n, or null when nothing is there. */
+export function cellAt(p: Vec3, n: Vec3): number | null {
+  return BY_STICKER.get(key(p) + '|' + key(n)) ?? null;
+}
 
 function indexOfSticker(p: Vec3, n: Vec3): number {
   const i = BY_STICKER.get(key(p) + '|' + key(n));
@@ -100,7 +111,8 @@ export interface Turn {
   readonly quarter: 1 | -1;
 }
 
-function rotate(v: Vec3, axis: Axis, quarter: 1 | -1): Vec3 {
+/** A quarter turn of a vector about a coordinate axis, by the right-hand rule. */
+export function rotate(v: Vec3, axis: Axis, quarter: 1 | -1): Vec3 {
   const [x, y, z] = v;
   if (axis === 0) return quarter === 1 ? [x, -z, y] : [x, z, -y];
   if (axis === 1) return quarter === 1 ? [z, y, -x] : [-z, y, x];

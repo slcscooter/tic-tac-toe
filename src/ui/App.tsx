@@ -130,6 +130,7 @@ export default function App({
       {screen === 'game' && session && (
         <GameScreen
           session={session}
+          accessible={settings.accessible}
           hintText={hintText}
           active={active}
           focusKey={focusKey}
@@ -141,9 +142,11 @@ export default function App({
           onHelp={showHelp}
         />
       )}
-      <div className="visually-hidden" aria-live="polite" aria-atomic="true" data-testid="announcer">
-        {announcement.text && <p key={announcement.key}>{announcement.text}</p>}
-      </div>
+      {settings.accessible && (
+        <div className="visually-hidden" aria-live="polite" aria-atomic="true" data-testid="announcer">
+          {announcement.text && <p key={announcement.key}>{announcement.text}</p>}
+        </div>
+      )}
     </main>
   );
 }

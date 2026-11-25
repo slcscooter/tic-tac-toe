@@ -135,6 +135,29 @@ fieldset label {
   font-weight: 600;
 }
 
+/* The 3D cube: square, as wide as the column allows. Dragging turns the cube, not the page. */
+.cube-view {
+  width: min(100%, 560px);
+  aspect-ratio: 1;
+  margin: 8px 0;
+  /* Dark in both colour schemes, as in the prototype: marble reads best on near-black. */
+  background: #141414;
+  border-radius: 12px;
+}
+
+.cube-view canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+/* Accessible mode with the 3D cube: the cross is kept for screen readers, hidden from view. */
+.board.visually-hidden {
+  margin: -1px;
+}
+
 /* The unfolded cross: 4 columns and 3 rows of faces. */
 .board {
   display: grid;

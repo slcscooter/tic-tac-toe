@@ -16,8 +16,15 @@ const saved = (game = placeMark(newGame(9), 0)): SavedGame => ({
 describe('settings', () => {
   it('round-trips', () => {
     const s = memoryStorage();
-    saveSettings(s, { mode: 'two', level: 'easy', start: 'random' });
-    expect(loadSettings(s)).toEqual({ mode: 'two', level: 'easy', start: 'random' });
+    saveSettings(s, { mode: 'two', level: 'easy', start: 'random', accessible: true });
+    expect(loadSettings(s)).toEqual({ mode: 'two', level: 'easy', start: 'random', accessible: true });
+  });
+
+  it('keeps accessible mode off by default, and for settings saved before it existed', () => {
+    const s = memoryStorage();
+    expect(loadSettings(s).accessible).toBe(false);
+    s.setItem('chaos-cube:settings', JSON.stringify({ mode: 'two', level: 'easy', start: 'random' }));
+    expect(loadSettings(s)).toEqual({ mode: 'two', level: 'easy', start: 'random', accessible: false });
   });
 
   it('falls back to the defaults on missing, broken or unknown values', () => {

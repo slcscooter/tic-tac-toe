@@ -282,6 +282,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@dimforge/rapier3d-compat@npm:~0.12.0":
+  version: 0.12.0
+  resolution: "@dimforge/rapier3d-compat@npm:0.12.0"
+  checksum: 86cb3b39925673761aa5dca5429ca44e0c7ac8072472cca925e2ca732be695292e318501a2ab39110be1549d4f143a0af0620246657f76570c8cdd1b0b3df36c
+  languageName: node
+  linkType: hard
+
 "@emnapi/core@npm:2.0.0-beta.2":
   version: 2.0.0-beta.2
   resolution: "@emnapi/core@npm:2.0.0-beta.2"
@@ -1065,6 +1072,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tweenjs/tween.js@npm:~23.1.3":
+  version: 23.1.3
+  resolution: "@tweenjs/tween.js@npm:23.1.3"
+  checksum: 2f8a908b275bb6729bde4b863c277bf7411d2e0302ceb0455369479077b89eaf8380cd9206b91ff574416418a95c6f06db4e1ddea732a286d0db0ba8e7c093d3
+  languageName: node
+  linkType: hard
+
 "@tybys/wasm-util@npm:^0.10.3":
   version: 0.10.5
   resolution: "@tybys/wasm-util@npm:0.10.5"
@@ -1175,6 +1189,34 @@ __metadata:
   dependencies:
     csstype: ^3.0.2
   checksum: def174cf34e8450ea326d02e3b3a9378e51aaa71e6dd25e5f6750ddc5f3eda5099bf1b5c415cb911d91bec354b9ef25c99e55a1deedf483b93ed698da0e20ab4
+  languageName: node
+  linkType: hard
+
+"@types/stats.js@npm:*":
+  version: 0.17.4
+  resolution: "@types/stats.js@npm:0.17.4"
+  checksum: 6f1a20e09da0c0b371b3c095b2787a91a9397944679aa506a0886160faf0ad185b911a34b4ec325f146810c5be969f085e81264e2dbe39fd57eb8ff98347b5f4
+  languageName: node
+  linkType: hard
+
+"@types/three@npm:^0.187.0":
+  version: 0.187.0
+  resolution: "@types/three@npm:0.187.0"
+  dependencies:
+    "@dimforge/rapier3d-compat": ~0.12.0
+    "@tweenjs/tween.js": ~23.1.3
+    "@types/stats.js": "*"
+    "@types/webxr": ">=0.5.17"
+    fflate: ~0.8.3
+    meshoptimizer: ~1.1.1
+  checksum: 36632dda1334c7732628a17385b0046adfaac9c0acdd81fd8b57a42e26499861772a4a2b8a4a5df76bd429d6f6062519f488d6a954ef09c84def8c264d453589
+  languageName: node
+  linkType: hard
+
+"@types/webxr@npm:>=0.5.17":
+  version: 0.5.24
+  resolution: "@types/webxr@npm:0.5.24"
+  checksum: 3c87ea6a06cabb3023dc353363733763237c9d8f45d0402b07074823575805830133c0de00d34b4f73e9a6ba9a2ed2de204f62b33f6d820e14970a61a3333c36
   languageName: node
   linkType: hard
 
@@ -2087,6 +2129,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fflate@npm:~0.8.3":
+  version: 0.8.3
+  resolution: "fflate@npm:0.8.3"
+  checksum: a2a417e8fb5128b946cb397ab59a90e089057cba492f2c17a89c4af6ba8568b3da72ed36ef1efe901df7858a20964ce56e84d282e60498be1947fcc6133bc891
+  languageName: node
+  linkType: hard
+
 "file-entry-cache@npm:^8.0.0":
   version: 8.0.0
   resolution: "file-entry-cache@npm:8.0.0"
@@ -2614,6 +2663,13 @@ __metadata:
   version: 1.4.1
   resolution: "merge2@npm:1.4.1"
   checksum: 7268db63ed5169466540b6fb947aec313200bcf6d40c5ab722c22e242f651994619bcd85601602972d3c85bd2cc45a358a4c61937e9f11a061919a1da569b0c2
+  languageName: node
+  linkType: hard
+
+"meshoptimizer@npm:~1.1.1":
+  version: 1.1.1
+  resolution: "meshoptimizer@npm:1.1.1"
+  checksum: 9e309422b27bd4fd94fa52fb5915a41c626df314c06ce18f4a51c22d5b9ae75cc9f6ce91577fd727a49446a42bbc305dcd79186bf0e506e07911f081b9cdbbe7
   languageName: node
   linkType: hard
 
@@ -3279,6 +3335,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"three@npm:^0.187.0":
+  version: 0.187.0
+  resolution: "three@npm:0.187.0"
+  checksum: 05621780e26634a2607ec082824871ef64da823a8c3b7e693ab406886c2b71b11ff8431a08c3abf0ebeaa74d8ee23237f71125fa9859b9727c20986b53f97a42
+  languageName: node
+  linkType: hard
+
 "tic-tac-toe@workspace:.":
   version: 0.0.0-use.local
   resolution: "tic-tac-toe@workspace:."
@@ -3290,6 +3353,7 @@ __metadata:
     "@testing-library/user-event": ^14.6.1
     "@types/react": ^19.1.13
     "@types/react-dom": ^19.1.9
+    "@types/three": ^0.187.0
     "@vitejs/plugin-react": ^5.0.2
     axe-core: 4.14.0
     eslint: ^9.35.0
@@ -3299,6 +3363,7 @@ __metadata:
     jsdom: ^26.1.0
     react: ^19.1.1
     react-dom: ^19.1.1
+    three: ^0.187.0
     typescript: ~5.8.3
     typescript-eslint: ^8.43.0
     vite: ^7.1.6

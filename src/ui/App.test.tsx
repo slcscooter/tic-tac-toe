@@ -10,7 +10,7 @@ import type { GameState } from '../engine/game';
 import App from './App';
 import { describeMove } from './announce';
 import { GameScreen } from './GameScreen';
-import { saveGame } from './storage';
+import { DEFAULT_SETTINGS, saveGame, saveSettings } from './storage';
 import { memoryStorage } from './testStorage';
 import type { Session } from './useChaosGame';
 
@@ -22,7 +22,14 @@ function seedWithoutChaosAt(cells: number[]): number {
   for (let s = 1; ; s++) if (cells.every(c => !newGame(s).cells[c].chaos)) return s;
 }
 
-function setup(storage: Storage = memoryStorage(), aiDelayMs = 0, seed = seedWithoutChaosAt([F5, F6])) {
+/** Storage with accessible mode on: most of these tests play by keyboard and screen reader. */
+function accessibleStorage(): Storage {
+  const storage = memoryStorage();
+  saveSettings(storage, { ...DEFAULT_SETTINGS, accessible: true });
+  return storage;
+}
+
+function setup(storage: Storage = accessibleStorage(), aiDelayMs = 0, seed = seedWithoutChaosAt([F5, F6])) {
   const user = userEvent.setup();
   const view = render(
     <StrictMode>
@@ -100,7 +107,7 @@ describe('playing against the AI', () => {
   });
 
   it('ignores your moves while the AI is thinking', async () => {
-    const { user } = setup(memoryStorage(), 60_000);
+    const { user } = setup(accessibleStorage(), 60_000);
     await user.click(screen.getByRole('button', { name: 'New game' }));
     await user.keyboard('{Enter}{ArrowRight}{Enter}');
     expect(cellButton('Front 6')).toHaveAccessibleName('Front 6, empty');
@@ -194,7 +201,7 @@ describe('two players', () => {
     }
     expect(expected.logged).toMatch(/ other marks? moved: [XO] from /);
 
-    const { user } = setup(memoryStorage(), 0, seed);
+    const { user } = setup(accessibleStorage(), 0, seed);
     await user.click(screen.getByRole('radio', { name: 'Two players on this device' }));
     await user.click(screen.getByRole('button', { name: 'New game' }));
     await user.keyboard('{Enter}{ArrowLeft}{Enter}{ArrowRight}{ArrowRight}{Enter}');
@@ -206,7 +213,7 @@ describe('two players', () => {
 
 describe('saving', () => {
   it('continues an unfinished game on the next visit', async () => {
-    const storage = memoryStorage();
+    const storage = accessibleStorage();
     const first = setup(storage);
     await first.user.click(screen.getByRole('button', { name: 'New game' }));
     await first.user.keyboard('{Enter}');
@@ -230,7 +237,7 @@ describe('the end of a game', () => {
       ...start,
       cells: start.cells.map((_, i) => ({ mark: line.cells.includes(i) && i !== last ? 'X' : null, chaos: false })),
     };
-    const storage = memoryStorage();
+    const storage = accessibleStorage();
     saveGame(storage, { version: 1, game, mode: 'ai', level: 'easy', human: 'X', log: ['New game.'] });
 
     const { user } = setup(storage);
@@ -272,10 +279,34 @@ describe('hidden chaos cells', () => {
       onPlayAgain: () => {},
       onMenu: () => {},
       onHelp: () => {},
+      accessible: true,
     };
     const first = render(<GameScreen session={a} {...props} />).container.innerHTML;
     const second = render(<GameScreen session={b} {...props} />).container.innerHTML;
     expect(first).toBe(second);
+  });
+});
+
+describe('accessible mode setting', () => {
+  it('is off by default: no announcements and no Moves list', async () => {
+    const { user } = setup(memoryStorage());
+    expect(screen.getByRole('checkbox', { name: 'Screen reader and keyboard mode' })).not.toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'New game' }));
+    expect(screen.getByText('Your turn, you are X. Chaos cells fired: 0 of 6.')).toBeInTheDocument();
+    expect(screen.queryByTestId('announcer')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Moves' })).not.toBeInTheDocument();
+  });
+
+  it('turns on from the menu and is remembered on the next visit', async () => {
+    const storage = memoryStorage();
+    const first = setup(storage);
+    await first.user.click(screen.getByRole('checkbox', { name: 'Screen reader and keyboard mode' }));
+    first.unmount();
+    const { user } = setup(storage);
+    expect(screen.getByRole('checkbox', { name: 'Screen reader and keyboard mode' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'New game' }));
+    expect(announcer()).toHaveTextContent('New game against the AI. You are X. Your turn.');
+    expect(screen.getByRole('region', { name: 'Moves' })).toBeInTheDocument();
   });
 });
 

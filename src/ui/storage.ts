@@ -15,9 +15,11 @@ export interface Settings {
   readonly mode: Mode;
   readonly level: Level;
   readonly start: Start;
+  /** Screen reader and keyboard mode. Off by default: Scott chose opt-in on 2026-11-24. */
+  readonly accessible: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { mode: 'ai', level: 'medium', start: 'you' };
+export const DEFAULT_SETTINGS: Settings = { mode: 'ai', level: 'medium', start: 'you', accessible: false };
 
 export interface SavedGame {
   readonly version: 1;
@@ -67,7 +69,8 @@ const isStart = (v: unknown): v is Start => v === 'you' || v === 'ai' || v === '
 export function loadSettings(storage: Storage | null): Settings {
   const v = read(storage, SETTINGS_KEY);
   if (!isObject(v) || !isMode(v.mode) || !isLevel(v.level) || !isStart(v.start)) return DEFAULT_SETTINGS;
-  return { mode: v.mode, level: v.level, start: v.start };
+  // Settings saved before accessible mode existed have no flag, which means off.
+  return { mode: v.mode, level: v.level, start: v.start, accessible: v.accessible === true };
 }
 
 export function saveSettings(storage: Storage | null, settings: Settings): void {

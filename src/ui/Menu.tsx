@@ -75,6 +75,17 @@ export function Menu({ settings, canContinue, onChange, onNewGame, onContinue, o
           <Radios legend="Who goes first" name="start" choices={STARTS} value={settings.start} onChange={start => onChange({ ...settings, start })} />
         </>
       )}
+      <fieldset>
+        <legend>Accessibility</legend>
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.accessible}
+            onChange={e => onChange({ ...settings, accessible: e.target.checked })}
+          />
+          Screen reader and keyboard mode
+        </label>
+      </fieldset>
       <div className="actions">
         <button type="button" onClick={onNewGame}>
           New game

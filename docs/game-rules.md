@@ -15,8 +15,13 @@ overrule any of them.
   the face sits on the unfolded cross, like a phone keypad. So "Front 1" is the top left cell of
   Front, "Front 5" its center and "Front 9" its bottom right. Scott chose this on 2026-11-24, after
   the cttt prototype.
-- The screen shows the cube unfolded flat as a cross. It is fully playable by keyboard and screen
-  reader, and every move and rotation is announced.
+- The screen shows the cube in 3D, like the cttt prototype: click or tap a square to place a mark,
+  drag to turn the cube, and chaos turns play out as real slice turns. Scott chose this on
+  2026-11-24; the flat cross shown before was never put to him plainly. Without WebGL, the flat
+  cross is the board.
+- Screen reader and keyboard mode is a menu setting, off by default (Scott, 2026-11-24: opt-in, not
+  the default). With it on, the game is fully playable by keyboard and screen reader, and every move
+  and rotation is announced.
 - After chaos, the announcement says how many other marks the turns moved, and the move list names
   each one with where it went. Scott chose this on 2026-11-24, after a play test showed other marks,
   the player's own included, moving without a word.

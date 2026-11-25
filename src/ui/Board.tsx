@@ -1,5 +1,6 @@
-// The cube, unfolded as a cross: Top above Front; Left, Front, Right and Back in a row; Bottom
-// below Front. Each face is a labeled group of 9 cell buttons. Only the active cell is in the Tab
+// The cube's cells as buttons, unfolded as a cross: Top above Front; Left, Front, Right and Back in
+// a row; Bottom below Front. With the 3D cube on screen they are hidden from view and serve screen
+// readers and the keyboard (accessible mode); without WebGL they are the board. Each face is a labeled group of 9 cell buttons. Only the active cell is in the Tab
 // order. Arrow keys move as the face sits on the cross and step over cube edges onto the face that
 // touches it. This component is only ever given marks, never chaos cells.
 
@@ -13,6 +14,8 @@ import { BOARD_HELP } from './announce';
 export type BoardCommand = 'status' | 'hint';
 
 interface BoardProps {
+  /** Hidden from view but kept for screen readers and the keyboard, while the 3D cube shows the board. */
+  readonly hidden: boolean;
   readonly marks: readonly (Mark | null)[];
   readonly winning: ReadonlySet<number>;
   readonly canPlay: boolean;
@@ -33,7 +36,7 @@ const ARROWS: Record<string, [number, number]> = {
 
 const FACE_KEYS: Record<string, FaceName> = { t: 'top', d: 'bottom', f: 'front', b: 'back', l: 'left', r: 'right' };
 
-export function Board({ marks, winning, canPlay, active, focusKey, onActiveChange, onPlay, onCommand }: BoardProps) {
+export function Board({ hidden, marks, winning, canPlay, active, focusKey, onActiveChange, onPlay, onCommand }: BoardProps) {
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
@@ -69,7 +72,7 @@ export function Board({ marks, winning, canPlay, active, focusKey, onActiveChang
   }
 
   return (
-    <div className="board" role="group" aria-label="Cube board" aria-describedby="board-help" onKeyDown={onKeyDown}>
+    <div className={hidden ? 'board visually-hidden' : 'board'} role="group" aria-label="Cube board" aria-describedby="board-help" onKeyDown={onKeyDown}>
       <p id="board-help" className="visually-hidden">
         {BOARD_HELP}
       </p>
@@ -90,6 +93,7 @@ export function Board({ marks, winning, canPlay, active, focusKey, onActiveChang
                   ref={el => {
                     buttons.current[i] = el;
                   }}
+                  id={`cell-${i}`}
                   type="button"
                   className={`cell${mark ? ` mark-${mark}` : ''}${won ? ' winning' : ''}`}
                   tabIndex={i === active ? 0 : -1}

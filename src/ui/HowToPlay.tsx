@@ -19,13 +19,18 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
 
       <h2>The board</h2>
       <p>
-        The board is a Rubik&apos;s cube with 6 faces of 9 cells. The screen shows it unfolded as a cross: Top above
-        Front; Left, Front, Right and Back in a row; Bottom below Front. Cells are numbered 1 to 9 on each face like a
-        phone keypad, so Front 1 is the top left of Front and Front 5 its center.
+        The board is a Rubik&apos;s cube with 6 faces of 9 cells, shown in 3D. Click or tap a square to place your
+        mark, and drag to turn the cube and see the other faces. The latest move has an orange outline. Cells are
+        numbered 1 to 9 on each face like a phone keypad, so Front 1 is the top left of Front and Front 5 its center.
+        Left, Front, Right and Back are numbered with Top above them; Top with Front below it, and Bottom with Front
+        above it.
       </p>
 
-      <h2>Moving around</h2>
-      <p>{BOARD_HELP}</p>
+      <h2>Screen reader and keyboard mode</h2>
+      <p>
+        Turn this on in the menu to play by keyboard with a screen reader. Every move is announced, and the Moves list
+        keeps the whole game. {BOARD_HELP}
+      </p>
 
       <h2>Winning lines</h2>
       <p>
