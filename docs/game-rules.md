@@ -10,8 +10,11 @@ overrule any of them.
 ## The board
 
 - The board is the surface of a 3 by 3 Rubik's cube: 6 faces of 9 cells, so 54 cells.
-- The faces are Top, Bottom, Front, Back, Left and Right. A cell is named by face, row and column,
-  for example "Front, row 1, column 3". **Default.**
+- The faces are Top, Bottom, Front, Back, Left and Right. **Default** (the face names).
+- A cell is named by its face and a number from 1 to 9, read left to right and top to bottom as
+  the face sits on the unfolded cross, like a phone keypad. So "Front 1" is the top left cell of
+  Front, "Front 5" its center and "Front 9" its bottom right. Scott chose this on 2026-11-24, after
+  the cttt prototype.
 - The screen shows the cube unfolded flat as a cross. It is fully playable by keyboard and screen
   reader, and every move and rotation is announced.
 

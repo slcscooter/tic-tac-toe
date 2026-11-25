@@ -55,10 +55,10 @@ export function cell(name: FaceName, row: number, col: number): number {
   return cellIndex(faceIndex(name), row, col);
 }
 
-/** Spoken name of a cell, 1-based: "Front, row 1, column 3". */
+/** Spoken name of a cell: its face and 1 to 9 in keypad order, as in "Front 7". */
 export function cellName(index: number): string {
   const { face, row, col } = cellPosition(index);
-  return `${FACES[face].label}, row ${row + 1}, column ${col + 1}`;
+  return `${FACES[face].label} ${row * 3 + col + 1}`;
 }
 
 const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];

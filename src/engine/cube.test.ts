@@ -34,9 +34,12 @@ describe('cells', () => {
     }
   });
 
-  it('names cells 1-based for a screen reader', () => {
-    expect(cellName(cell('front', 0, 2))).toBe('Front, row 1, column 3');
-    expect(cellName(cell('bottom', 2, 0))).toBe('Bottom, row 3, column 1');
+  it('names cells by face and 1 to 9 in keypad order', () => {
+    expect(cellName(cell('front', 0, 0))).toBe('Front 1');
+    expect(cellName(cell('front', 0, 2))).toBe('Front 3');
+    expect(cellName(cell('front', 1, 1))).toBe('Front 5');
+    expect(cellName(cell('bottom', 2, 0))).toBe('Bottom 7');
+    expect(cellName(cell('back', 2, 2))).toBe('Back 9');
   });
 });
 
