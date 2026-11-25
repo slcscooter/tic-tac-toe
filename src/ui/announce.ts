@@ -33,16 +33,33 @@ export function startMessage(state: GameState, p: Players): string {
   return state.turn === p.human ? `${you} Your turn.` : `${you} The AI moves first.`;
 }
 
-/** What happened on the move that turned `prev` into `next`. */
-export function describeMove(prev: GameState, next: GameState, p: Players): string {
+export interface MoveText {
+  /** What the live region reads. After chaos it gives only a count of the other marks that moved. */
+  readonly spoken: string;
+  /** The Moves list entry. After chaos it also names each other mark that moved, and where to. */
+  readonly logged: string;
+}
+
+/** Marks already on the board whose cell ended somewhere else after the turns, X first. */
+function marksMoved(prev: GameState, turns: Parameters<typeof whereAfter>[1]) {
+  return prev.cells
+    .map((c, from) => ({ mark: c.mark, from, to: whereAfter(from, turns) }))
+    .filter((m): m is { mark: Mark; from: number; to: number } => m.mark !== null && m.to !== m.from)
+    .sort((a, b) => (a.mark === b.mark ? a.from - b.from : a.mark === 'X' ? -1 : 1));
+}
+
+/** What happened on the move that turned `prev` into `next`. Scott chose the split on 2026-11-24. */
+export function describeMove(prev: GameState, next: GameState, p: Players): MoveText {
   const move = next.lastMove;
-  if (!move || next === prev) return '';
+  if (!move || next === prev) return { spoken: '', logged: '' };
   const who = name(move.player, p);
   const parts = [
     p.mode === 'two'
       ? `${move.player} played ${cellName(move.index)}.`
       : `${who} played ${move.player} at ${cellName(move.index)}.`,
   ];
+  let count = '';
+  let list = '';
 
   if (move.chaos) {
     const { number, turns } = move.chaos;
@@ -50,10 +67,16 @@ export function describeMove(prev: GameState, next: GameState, p: Players): stri
     parts.push(...turns.map(t => `${describeTurn(t)}.`));
     const landed = whereAfter(move.index, turns);
     parts.push(landed === move.index ? 'That mark ended where it started.' : `That mark moved to ${cellName(landed)}.`);
+    const moved = marksMoved(prev, turns);
+    const n = moved.length;
+    count = n === 0 ? 'No other marks moved.' : `${n} other ${n === 1 ? 'mark' : 'marks'} moved`;
+    list = n === 0 ? count : `${count}: ${moved.map(m => `${m.mark} from ${cellName(m.from)} to ${cellName(m.to)}`).join(', ')}.`;
+    if (n > 0) count += '.';
   }
 
-  parts.push(resultMessage(next, p));
-  return parts.filter(Boolean).join(' ');
+  const result = resultMessage(next, p);
+  const join = (extra: string) => [...parts, extra, result].filter(Boolean).join(' ');
+  return { spoken: join(count), logged: join(list) };
 }
 
 export function resultMessage(state: GameState, p: Players): string {

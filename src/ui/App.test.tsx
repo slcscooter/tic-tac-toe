@@ -5,9 +5,10 @@ import axe from 'axe-core';
 import { describe, expect, it } from 'vitest';
 import { seededRandom } from '../engine/ai';
 import { cell, LINES } from '../engine/cube';
-import { newGame } from '../engine/game';
+import { newGame, placeMark } from '../engine/game';
 import type { GameState } from '../engine/game';
 import App from './App';
+import { describeMove } from './announce';
 import { GameScreen } from './GameScreen';
 import { saveGame } from './storage';
 import { memoryStorage } from './testStorage';
@@ -21,8 +22,7 @@ function seedWithoutChaosAt(cells: number[]): number {
   for (let s = 1; ; s++) if (cells.every(c => !newGame(s).cells[c].chaos)) return s;
 }
 
-function setup(storage: Storage = memoryStorage(), aiDelayMs = 0) {
-  const seed = seedWithoutChaosAt([F5, F6]);
+function setup(storage: Storage = memoryStorage(), aiDelayMs = 0, seed = seedWithoutChaosAt([F5, F6])) {
   const user = userEvent.setup();
   const view = render(
     <StrictMode>
@@ -177,6 +177,31 @@ describe('two players', () => {
     expect(announcer()).toHaveTextContent('O played Front 6. X to move.');
     expect(moves()).toHaveLength(3);
   });
+
+  it('speaks a count of the marks chaos moved, and names them only in the move list', async () => {
+    // X plays Front 5, O plays Front 4, then X plays Front 6, a chaos cell. Pick a seed whose chaos
+    // turn moves at least one of the first two marks, so the count and the names differ.
+    const F4 = cell('front', 1, 0);
+    const TWO = { mode: 'two', human: 'X' } as const;
+    let seed = 0;
+    let expected = { spoken: '', logged: '' };
+    for (let s = 1; expected.spoken === expected.logged; s++) {
+      const g = newGame(s);
+      if (!g.cells[F6].chaos || g.cells[F5].chaos || g.cells[F4].chaos) continue;
+      const before = placeMark(placeMark(g, F5), F4);
+      expected = describeMove(before, placeMark(before, F6), TWO);
+      seed = s;
+    }
+    expect(expected.logged).toMatch(/ other marks? moved: [XO] from /);
+
+    const { user } = setup(memoryStorage(), 0, seed);
+    await user.click(screen.getByRole('radio', { name: 'Two players on this device' }));
+    await user.click(screen.getByRole('button', { name: 'New game' }));
+    await user.keyboard('{Enter}{ArrowLeft}{Enter}{ArrowRight}{ArrowRight}{Enter}');
+    expect(announcer()).toHaveTextContent(expected.spoken, { normalizeWhitespace: false });
+    expect(announcer().textContent).toMatch(/ other marks? moved\. O to move\.$/);
+    expect(moves().at(-1)).toHaveTextContent(expected.logged, { normalizeWhitespace: false });
+  });
 });
 
 describe('saving', () => {
@@ -230,6 +255,7 @@ describe('hidden chaos cells', () => {
         level: 'hard',
         human: 'X',
         log: ['New game.'],
+        spoken: 'New game.',
       };
     };
     const a = session(1);

@@ -25,32 +25,45 @@ const FRONT_ROW = LINES.find(l => [cell('front', 1, 0), cell('front', 1, 1), cel
 describe('describeMove', () => {
   it('says what you played, then hands over to the AI quietly', () => {
     const prev = game();
-    expect(describeMove(prev, placeMark(prev, cell('front', 2, 0)), YOU_X)).toBe('You played X at Front 7.');
+    expect(describeMove(prev, placeMark(prev, cell('front', 2, 0)), YOU_X)).toEqual({ spoken: 'You played X at Front 7.', logged: 'You played X at Front 7.' });
   });
 
   it('says what the AI played, then that it is your turn', () => {
     const prev = game();
-    expect(describeMove(prev, placeMark(prev, cell('left', 0, 2)), YOU_O)).toBe('AI played X at Left 3. Your turn.');
+    expect(describeMove(prev, placeMark(prev, cell('left', 0, 2)), YOU_O)).toEqual({ spoken: 'AI played X at Left 3. Your turn.', logged: 'AI played X at Left 3. Your turn.' });
   });
 
   it('names the mark and whose move is next for two players', () => {
     const prev = game();
-    expect(describeMove(prev, placeMark(prev, cell('top', 1, 1)), TWO)).toBe('X played Top 5. O to move.');
+    expect(describeMove(prev, placeMark(prev, cell('top', 1, 1)), TWO)).toEqual({ spoken: 'X played Top 5. O to move.', logged: 'X played Top 5. O to move.' });
   });
 
   it('reads out each chaos turn and where the mark ended up', () => {
     const prev = game({ chaos: [cell('front', 0, 0)] });
     const next = placeMark(prev, cell('front', 0, 0), seed => ({ turn: FRONT_CW, seed }));
-    expect(describeMove(prev, next, YOU_X)).toBe(
-      'You played X at Front 1. Chaos cell 1! 1 turn: Front face, turned clockwise. That mark moved to Front 3.',
-    );
+    const said = 'You played X at Front 1. Chaos cell 1! 1 turn: Front face, turned clockwise. That mark moved to Front 3. No other marks moved.';
+    expect(describeMove(prev, next, YOU_X)).toEqual({ spoken: said, logged: said });
+  });
+
+  it('counts the other marks chaos moved, and names them only in the move list', () => {
+    const prev = game({
+      X: [cell('front', 2, 0), cell('front', 1, 1)], // Front 7 moves; the center Front 5 stays put
+      O: [cell('top', 2, 1), cell('back', 1, 1)], // Top 8 moves; Back 5 is off the turned slice
+      chaos: [cell('front', 0, 0)],
+    });
+    const next = placeMark(prev, cell('front', 0, 0), seed => ({ turn: FRONT_CW, seed }));
+    const start = 'You played X at Front 1. Chaos cell 1! 1 turn: Front face, turned clockwise. That mark moved to Front 3.';
+    expect(describeMove(prev, next, YOU_X)).toEqual({
+      spoken: `${start} 2 other marks moved.`,
+      logged: `${start} 2 other marks moved: X from Front 7 to Front 1, O from Top 8 to Right 4.`,
+    });
   });
 
   it('announces a win with the cells of the line', () => {
     const [last, ...four] = FRONT_ROW.cells;
     const prev = game({ X: four });
     const names = 'Front 4, Front 5, Front 6, Right 4, Right 5';
-    const said = describeMove(prev, placeMark(prev, last), YOU_X);
+    const said = describeMove(prev, placeMark(prev, last), YOU_X).spoken;
     expect(said).toMatch(/^You played X at .*\. You win with /);
     for (const n of names.split(', ')) expect(said).toContain(n);
   });

@@ -16,6 +16,8 @@ export interface Session {
   readonly level: Level;
   readonly human: Mark;
   readonly log: readonly string[];
+  /** What the live region reads for the latest log entry. It can be shorter than the entry. Not saved. */
+  readonly spoken: string;
 }
 
 type Action = { type: 'start'; session: Session } | { type: 'move'; index: number };
@@ -25,7 +27,8 @@ function reducer(session: Session | null, action: Action): Session | null {
   if (!session) return session;
   const next = placeMark(session.game, action.index);
   if (next === session.game) return session;
-  return { ...session, game: next, log: [...session.log, describeMove(session.game, next, session)] };
+  const text = describeMove(session.game, next, session);
+  return { ...session, game: next, log: [...session.log, text.logged], spoken: text.spoken };
 }
 
 export const players = (s: Session): Players => ({ mode: s.mode, human: s.human });
@@ -51,14 +54,16 @@ export function useChaosGame({ storage, random, aiDelayMs }: ChaosGameOptions) {
         settings.start === 'you' ? 'X' : settings.start === 'ai' ? 'O' : random() < 0.5 ? 'X' : 'O';
       const game = newGame(seed);
       const base = { game, mode: settings.mode, level: settings.level, human: settings.mode === 'two' ? 'X' : human };
-      dispatch({ type: 'start', session: { ...base, log: [startMessage(game, base)] } });
+      const said = startMessage(game, base);
+      dispatch({ type: 'start', session: { ...base, log: [said], spoken: said } });
     },
     [random],
   );
 
   const resume = useCallback((saved: SavedGame) => {
     const { game, mode, level, human, log } = saved;
-    dispatch({ type: 'start', session: { game, mode, level, human, log: [...log, 'Game continued.'] } });
+    const said = 'Game continued.';
+    dispatch({ type: 'start', session: { game, mode, level, human, log: [...log, said], spoken: said } });
   }, []);
 
   const play = useCallback(

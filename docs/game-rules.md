@@ -17,6 +17,9 @@ overrule any of them.
   the cttt prototype.
 - The screen shows the cube unfolded flat as a cross. It is fully playable by keyboard and screen
   reader, and every move and rotation is announced.
+- After chaos, the announcement says how many other marks the turns moved, and the move list names
+  each one with where it went. Scott chose this on 2026-11-24, after a play test showed other marks,
+  the player's own included, moving without a word.
 
 ## Players and modes
 

@@ -40,7 +40,9 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
         Six chaos cells are hidden on the board, one on each face at the start. Nobody can see them, not even the AI.
         When you place a mark on one, your mark goes down, then the cube turns: 1 random quarter turn for the first
         chaos cell, 2 for the second, up to 6 for the sixth. Any slice can turn, middle slices included, and marks move
-        with their cells. If your mark completes 5 in a row, you win at once and the chaos never runs.
+        with their cells. If your mark completes 5 in a row, you win at once and the chaos never runs. After the
+        turns you hear where your mark went and how many other marks moved. The Moves list names each one and
+        where it went.
       </p>
 
       <h2>How a game ends</h2>

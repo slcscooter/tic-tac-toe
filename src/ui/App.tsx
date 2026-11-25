@@ -45,13 +45,14 @@ export default function App({
   const { session, start, resume, play } = useChaosGame({ storage, random, aiDelayMs });
 
   // The one live region reads the newest thing: a notice asked for since the last move, or else the
-  // latest move-log entry. It is worked out during render, so it never lags the move list. Each
+  // spoken form of the latest move-log entry (after chaos it counts the other marks that moved,
+  // where the entry names them). It is worked out during render, so it never lags the move list. Each
   // message gets its own key, so even a repeat is read again.
   const logLength = session?.log.length ?? 0;
   const announcement =
     notice.text && notice.atLog === logLength
       ? { key: `notice-${notice.n}`, text: notice.text }
-      : { key: `log-${logLength}`, text: session?.log.at(-1) ?? '' };
+      : { key: `log-${logLength}`, text: session?.spoken ?? '' };
   const announce = (text: string) => setNotice(prev => ({ text, n: prev.n + 1, atLog: logLength }));
 
   const toGame = () => {
