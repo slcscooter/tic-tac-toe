@@ -11,16 +11,21 @@ interface CubeViewProps {
   readonly board: CubeBoard;
   /** The latest move. A new one plays its chaos turns and swings the camera to where it landed. */
   readonly move: MoveEvent | null;
+  /** The winner's line once the game is won, else null. */
+  readonly winLine: readonly number[] | null;
+  /** Show the cube unfolded flat around the winning line. */
+  readonly unfolded: boolean;
   /** True when the flat board's buttons carry the game for screen readers, so the picture is hidden from them. */
   readonly decorative: boolean;
   readonly onPick: (index: number) => void;
   readonly onUnavailable: () => void;
 }
 
-export function CubeView({ board, move, decorative, onPick, onUnavailable }: CubeViewProps) {
+export function CubeView({ board, move, winLine, unfolded, decorative, onPick, onUnavailable }: CubeViewProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const scene = useRef<CubeScene | null>(null);
   const lastMove = useRef<MoveEvent | null | undefined>(undefined);
+  const winShown = useRef(false);
   const latest = useRef({ onPick, onUnavailable });
   useEffect(() => {
     latest.current = { onPick, onUnavailable };
@@ -45,6 +50,7 @@ export function CubeView({ board, move, decorative, onPick, onUnavailable }: Cub
       s.dispose();
       scene.current = null;
       lastMove.current = undefined;
+      winShown.current = false;
     };
   }, []);
 
@@ -62,6 +68,16 @@ export function CubeView({ board, move, decorative, onPick, onUnavailable }: Cub
     }
     lastMove.current = move;
   }, [board, move]);
+
+  // Unfold to show the winning line, or fold back. On first paint (coming back from the menu, say)
+  // it shows the end state at once, with no animation.
+  const winKey = winLine?.join(',') ?? '';
+  useEffect(() => {
+    const s = scene.current;
+    if (!s) return;
+    s.setWin(winKey ? winKey.split(',').map(Number) : null, unfolded, winShown.current);
+    winShown.current = true;
+  }, [winKey, unfolded]);
 
   useEffect(() => {
     if (board.highlight !== null) scene.current?.showFace(cellPosition(board.highlight).face);

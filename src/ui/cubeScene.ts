@@ -9,6 +9,7 @@ import {
   BoxGeometry,
   DirectionalLight,
   Group,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -22,10 +23,12 @@ import {
   WebGLRenderer,
 } from 'three';
 import type { Material } from 'three';
-import { applyTurn, cellAt, CELL_COUNT, faceIndex, stickerOf } from '../engine/cube';
+import { applyTurn, cellAt, CELL_COUNT, faceIndex, FACES, stickerOf } from '../engine/cube';
 import type { Turn, Vec3 } from '../engine/cube';
 import type { Mark } from '../engine/game';
 import { beforeTurns, faceViewDirection, fromAngles, toAngles, turnAngle } from './cube3d';
+import { buildNet } from './cubeNet';
+import type { Net } from './cubeNet';
 
 export interface CubeBoard {
   readonly marks: readonly (Mark | null)[];
@@ -41,6 +44,9 @@ export interface CubeBoard {
 const BLOCK = 0.94; // block size; the gaps between blocks show the slices
 const DISTANCE = 8.6;
 const TURN_MS = 340;
+const UNFOLD_MS = 1800;
+const BAR_MS = 450;
+const SLAB = 0.2; // the flat tiles the cube unfolds into
 const CAMERA_MS = 450;
 const DRAG_PX = 6; // movement past this turns a press into a drag, not a click
 // Never tip all the way over the top or bottom: seen straight on, the cube looks flat.
@@ -55,6 +61,7 @@ const COLORS = {
   frame: 0x111111,
   winning: 0x22c55e,
   lastMove: 0xf97316,
+  bar: 0x111111,
 };
 
 /** Marks and highlights glow a little on their own, so they stay bold however the light falls. */
@@ -81,6 +88,10 @@ export class CubeScene {
   private readonly camera = new PerspectiveCamera(38, 1, 0.1, 100);
   private readonly blocks = new Map<string, Mesh>();
   private readonly cells: CellParts[] = [];
+  /** Each cell's fill, frame and marks, laid on its block's face. They move onto tiles to unfold. */
+  private readonly holders: Group[] = [];
+  private readonly slabGeo = new BoxGeometry(BLOCK, BLOCK, SLAB);
+  private readonly bar: Mesh;
   private readonly materials: Record<keyof typeof COLORS, MeshStandardMaterial>;
   private readonly disposables: { dispose(): void }[] = [];
   private readonly raycaster = new Raycaster();
@@ -97,7 +108,24 @@ export class CubeScene {
   private cameraMove: { from: { theta: number; phi: number }; to: { theta: number; phi: number }; start: number } | null = null;
   private press: { x: number; y: number; dragging: boolean; theta: number; phi: number } | null = null;
   private frame = 0;
+  private lastTick = 0;
   private readonly reducedMotion: boolean;
+
+  /** The winning line on show, as a key; '' when there is none. */
+  private winKey = '';
+  private winLine: readonly number[] = [];
+  /** 1 to show the cube unfolded flat, 0 to show it folded. */
+  private netTarget = 0;
+  private netAnimate = true;
+  private unfolding: {
+    net: Net;
+    slabs: Mesh[];
+    progress: number;
+    /** Where the camera looks, from how far, and which way it faces: folded, then flat. */
+    from: { target: Vector3; distance: number; quaternion: Quaternion };
+    to: { target: Vector3; distance: number; quaternion: Quaternion };
+    bar: { start: Vector3; dir: Vector3; length: number; grown: number };
+  } | null = null;
 
   constructor(canvas: HTMLCanvasElement, onPick: (index: number) => void) {
     this.canvas = canvas;
@@ -121,6 +149,10 @@ export class CubeScene {
 
     this.buildBlocks();
     this.buildCells();
+    this.bar = new Mesh(new BoxGeometry(1, 0.2, 0.06), this.materials.bar);
+    this.bar.visible = false;
+    this.scene.add(this.bar);
+    this.disposables.push(this.slabGeo, this.bar.geometry);
 
     ({ theta: this.theta, phi: this.phi } = toAngles(faceViewDirection(faceIndex('front'))));
     this.placeCamera();
@@ -155,8 +187,26 @@ export class CubeScene {
     this.invalidate();
   }
 
+  /**
+   * The winning line, and whether to show the cube unfolded flat around it. A different line, or
+   * none, resets to the folded cube at once. Otherwise the cube unfolds or folds back, animated
+   * when `animate` is true, after any chaos turns finish.
+   */
+  setWin(line: readonly number[] | null, unfolded: boolean, animate: boolean) {
+    const key = line?.join(',') ?? '';
+    if (key !== this.winKey) {
+      this.closeNet();
+      this.winKey = key;
+      this.winLine = line ?? [];
+    }
+    this.netTarget = line && unfolded ? 1 : 0;
+    this.netAnimate = animate && !this.reducedMotion;
+    this.invalidate();
+  }
+
   /** Swings the camera round to show a face, unless it already faces the camera well. */
   showFace(face: number) {
+    if (this.unfolding) return;
     const target = toAngles(faceViewDirection(face));
     const facing = new Vector3(...stickerOf(face * 9 + 4).n).dot(new Vector3(...fromAngles(this.theta, this.phi)));
     if (facing > 0.6) return;
@@ -250,6 +300,7 @@ export class CubeScene {
 
       holder.add(fill, frame, x, o);
       this.blocks.get(posKey(p))!.add(holder);
+      this.holders.push(holder);
       this.cells.push({ fill, frame, x, o });
     }
   }
@@ -281,6 +332,8 @@ export class CubeScene {
 
   private readonly tick = (now: number) => {
     this.frame = 0;
+    const dt = this.lastTick ? Math.min(100, now - this.lastTick) : 16;
+    this.lastTick = now;
     let busy = false;
 
     if (!this.turning && this.queue.length > 0) this.startTurn(this.queue.shift()!, now);
@@ -302,9 +355,124 @@ export class CubeScene {
       busy = true;
     }
 
+    if (this.stepNet(dt)) busy = true;
+
     this.renderer.render(this.scene, this.camera);
     if (busy || this.queue.length > 0) this.invalidate();
+    else this.lastTick = 0;
   };
+
+  // ---------------------------------------------------------------------------------------------
+  // Unfolding to show the winning line
+
+  /** Moves the net one frame toward its target. True while it is still moving. */
+  private stepNet(dt: number): boolean {
+    if (!this.winKey || this.turning || this.queue.length > 0) return false;
+    if (this.netTarget === 1 && !this.unfolding) this.openNet();
+    const u = this.unfolding;
+    if (!u) return false;
+
+    const step = this.netAnimate ? dt / UNFOLD_MS : 1;
+    u.progress = this.netTarget === 1 ? Math.min(1, u.progress + step) : Math.max(0, u.progress - step);
+    const e = easeInOut(u.progress);
+    u.net.setProgress(e);
+    // Turn to face the net while sliding over to its middle, and pull back early so the opening
+    // faces stay in view: a straight slide from the cube view would pass close to the cube.
+    const pullBack = 1 - (1 - u.progress) ** 3;
+    const distance = u.from.distance + (u.to.distance - u.from.distance) * pullBack;
+    this.camera.quaternion.slerpQuaternions(u.from.quaternion, u.to.quaternion, e);
+    const target = u.from.target.clone().lerp(u.to.target, e);
+    this.camera.position.copy(target).addScaledVector(new Vector3(0, 0, 1).applyQuaternion(this.camera.quaternion), distance);
+
+    // The bar grows along the line once the net lies flat, and goes as soon as it folds.
+    u.bar.grown = u.progress === 1 ? Math.min(1, u.bar.grown + (this.netAnimate ? dt / BAR_MS : 1)) : 0;
+    this.bar.visible = u.bar.grown > 0;
+    if (this.bar.visible) {
+      const length = u.bar.length * easeInOut(u.bar.grown);
+      this.bar.scale.set(length, 1, 1);
+      this.bar.position.copy(u.bar.start).addScaledVector(u.bar.dir, length / 2);
+    }
+
+    if (u.progress === 0 && this.netTarget === 0) {
+      this.closeNet();
+      return true;
+    }
+    return u.progress < 1 || u.bar.grown < 1;
+  }
+
+  /** Swaps the blocks for flat tiles carrying the same marks, and works out where to look once flat. */
+  private openNet() {
+    const net = buildNet(this.winLine);
+    this.cameraMove = null;
+    this.scene.add(net.root);
+    net.setProgress(0);
+    this.scene.updateMatrixWorld(true);
+    const slabs = net.anchors.map((anchor, i) => {
+      const slab = new Mesh(this.slabGeo, this.materials.marble);
+      slab.position.z = -(0.5 - BLOCK / 2) - SLAB / 2; // outer face flush with the block's
+      anchor.add(slab);
+      anchor.attach(this.holders[i]);
+      return slab;
+    });
+    for (const block of this.blocks.values()) block.visible = false;
+    this.hover = null;
+    this.paint();
+
+    // Once flat: look straight at the net, squares square to the screen, with the line running left
+    // to right (a diagonal line at 45 degrees).
+    net.setProgress(1);
+    const at = net.anchors.map(a => a.getWorldPosition(new Vector3()));
+    net.setProgress(0);
+    const normal = new Vector3(...FACES[net.plan.root].normal);
+    const first = at[this.winLine[0]];
+    const last = at[this.winLine[this.winLine.length - 1]];
+    const dir = last.clone().sub(first).normalize();
+    // The grid direction nearest the line becomes the screen's left-to-right.
+    const grid = [new Vector3(...FACES[net.plan.root].colDir), new Vector3(...FACES[net.plan.root].rowDir)]
+      .flatMap(a => [a, a.clone().negate()])
+      .reduce((best, a) => (a.dot(dir) > best.dot(dir) + 1e-6 ? a : best));
+    const across = grid.clone();
+    const up = normal.clone().cross(across).normalize();
+    const us = at.map(p => p.dot(across));
+    const ws = at.map(p => p.dot(up));
+    const [u0, u1, w0, w1] = [Math.min(...us), Math.max(...us), Math.min(...ws), Math.max(...ws)];
+    const center = normal.clone().multiplyScalar(1.5).addScaledVector(across, (u0 + u1) / 2).addScaledVector(up, (w0 + w1) / 2);
+    const tanV = Math.tan((this.camera.fov * Math.PI) / 360);
+    const distance = Math.max((w1 - w0 + 2.2) / 2 / tanV, (u1 - u0 + 2.2) / 2 / (tanV * this.camera.aspect));
+    const position = center.clone().addScaledVector(normal, distance);
+    const quaternion = new Quaternion().setFromRotationMatrix(new Matrix4().lookAt(position, center, up));
+
+    this.bar.quaternion.setFromRotationMatrix(new Matrix4().makeBasis(dir, normal.clone().cross(dir), normal));
+    this.unfolding = {
+      net,
+      slabs,
+      progress: 0,
+      from: { target: new Vector3(), distance: DISTANCE, quaternion: this.camera.quaternion.clone() },
+      to: { target: center, distance, quaternion },
+      bar: {
+        start: first.clone().addScaledVector(normal, 0.16).addScaledVector(dir, -0.35),
+        dir,
+        length: last.distanceTo(first) + 0.7,
+        grown: 0,
+      },
+    };
+  }
+
+  /** Back to the blocks: the marks go home and the camera returns to its orbit. */
+  private closeNet() {
+    const u = this.unfolding;
+    if (!u) return;
+    u.net.setProgress(0);
+    this.scene.updateMatrixWorld(true);
+    this.holders.forEach((holder, i) => this.blocks.get(posKey(stickerOf(i).p))!.attach(holder));
+    u.slabs.forEach(slab => slab.removeFromParent());
+    this.scene.remove(u.net.root);
+    for (const block of this.blocks.values()) block.visible = true;
+    this.bar.visible = false;
+    this.unfolding = null;
+    this.placeCamera();
+    this.invalidate();
+  }
 
   private startTurn(turn: Turn, now: number) {
     const pivot = new Group();
@@ -345,7 +513,7 @@ export class CubeScene {
   // Pointer: drag to spin, click to place
 
   private cellUnder(e: PointerEvent): number | null {
-    if (this.turning || this.queue.length > 0) return null;
+    if (this.turning || this.queue.length > 0 || this.unfolding) return null;
     const r = this.canvas.getBoundingClientRect();
     const ndc = new Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
@@ -356,6 +524,7 @@ export class CubeScene {
   }
 
   private readonly onPointerDown = (e: PointerEvent) => {
+    if (this.unfolding) return; // the flat net holds still
     this.canvas.setPointerCapture?.(e.pointerId);
     this.press = { x: e.clientX, y: e.clientY, dragging: false, theta: this.theta, phi: this.phi };
     this.cameraMove = null;

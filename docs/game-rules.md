@@ -22,6 +22,10 @@ overrule any of them.
 - Screen reader and keyboard mode is a menu setting, off by default (Scott, 2026-11-24: opt-in, not
   the default). With it on, the game is fully playable by keyboard and screen reader, and every move
   and rotation is announced.
+- When a player wins, the 3D cube unfolds flat with the winning line in one straight run: the
+  face in the middle of the line stays put and the line's faces unfold from it in a chain. A Fold
+  back button turns it back into the cube, and Unfold opens it again. Scott chose this on
+  2026-11-24. A draw keeps the cube folded.
 - After chaos, the announcement says how many other marks the turns moved, and the move list names
   each one with where it went. Scott chose this on 2026-11-24, after a play test showed other marks,
   the player's own included, moving without a word.

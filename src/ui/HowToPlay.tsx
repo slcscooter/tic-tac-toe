@@ -53,7 +53,8 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
       <h2>How a game ends</h2>
       <p>
         If chaos completes a line, that player wins, even when the other player set it off. If chaos completes lines
-        for both players at once, it is a draw. A full board with no line is also a draw.
+        for both players at once, it is a draw. A full board with no line is also a draw. When someone wins, the
+        cube unfolds flat with the winning line straight across it; Fold back turns it back into the cube.
       </p>
 
       <h2>AI levels</h2>

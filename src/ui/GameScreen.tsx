@@ -29,12 +29,17 @@ export function GameScreen(props: GameScreenProps) {
   const { session, accessible, hintText, active, focusKey, onActiveChange, onPlay, onCommand } = props;
   const { game } = session;
   const [webgl, setWebgl] = useState(hasWebGL);
+  // The game the player folded back. A new win, or a new game, unfolds again.
+  const [foldedFor, setFoldedFor] = useState<object | null>(null);
   const over = game.status !== 'playing';
   const winning = new Set(game.winningLines.flatMap(l => l.cells));
   const canPlay = humanToMove(session);
   const marks = game.cells.map(c => c.mark);
   const move = game.lastMove;
   const landed = move ? whereAfter(move.index, move.chaos?.turns ?? []) : null;
+  const winLine =
+    game.status === 'won' ? (game.winningLines.find(l => game.cells[l.cells[0]].mark === game.winner)?.cells ?? null) : null;
+  const unfolded = foldedFor !== game;
 
   // A click on the cube places a mark. In accessible mode, keyboard focus follows it.
   const pick = (index: number) => {
@@ -53,6 +58,8 @@ export function GameScreen(props: GameScreenProps) {
           <CubeView
             board={{ marks, winning, highlight: accessible || hintText ? active : null, lastMove: landed, canPick: canPlay }}
             move={move}
+            winLine={winLine}
+            unfolded={unfolded}
             decorative={accessible}
             onPick={pick}
             onUnavailable={() => setWebgl(false)}
@@ -78,9 +85,16 @@ export function GameScreen(props: GameScreenProps) {
 
       <div className="actions">
         {over ? (
-          <button type="button" onClick={props.onPlayAgain}>
-            Play again
-          </button>
+          <>
+            <button type="button" onClick={props.onPlayAgain}>
+              Play again
+            </button>
+            {webgl && winLine && (
+              <button type="button" onClick={() => setFoldedFor(unfolded ? game : null)}>
+                {unfolded ? 'Fold back' : 'Unfold'}
+              </button>
+            )}
+          </>
         ) : (
           <button type="button" aria-disabled={!canPlay} onClick={() => canPlay && onCommand('hint')}>
             Hint

@@ -5,7 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { seededRandom } from '../engine/ai';
-import { cell } from '../engine/cube';
+import { cell, LINES } from '../engine/cube';
 import { newGame, placeMark } from '../engine/game';
 import App from './App';
 import { DEFAULT_SETTINGS, saveGame, saveSettings } from './storage';
@@ -16,6 +16,8 @@ const scene = vi.hoisted(() => ({
   /** How many chaos turns each playMove call was given. */
   plays: [] as number[],
   boards: [] as { marks: readonly unknown[] }[],
+  /** Each setWin call: the line (or null), unfolded, animate. */
+  wins: [] as [readonly number[] | null, boolean, boolean][],
 }));
 
 vi.mock('./webgl', () => ({ hasWebGL: () => true }));
@@ -30,6 +32,9 @@ vi.mock('./cubeScene', () => ({
     }
     update(board: { marks: readonly unknown[] }) {
       scene.boards.push(board);
+    }
+    setWin(line: readonly number[] | null, unfolded: boolean, animate: boolean) {
+      scene.wins.push([line, unfolded, animate]);
     }
     showFace() {}
     resize() {}
@@ -49,6 +54,7 @@ beforeEach(() => {
   scene.pick = null;
   scene.plays = [];
   scene.boards = [];
+  scene.wins = [];
 });
 
 const F5 = cell('front', 1, 1);
@@ -108,5 +114,45 @@ describe('the 3D cube', () => {
     render(<App storage={storage} newSeed={() => 1} random={seededRandom(1)} aiDelayMs={0} />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Continue game' }));
     await waitFor(() => expect(scene.plays).toEqual([0]));
+  });
+
+  it('unfolds to show the winning line, folds back and unfolds again on request, and resets for a new game', async () => {
+    // X holds 4 of a line and plays the 5th; no chaos cells anywhere near it.
+    const line = LINES.find(l => l.kind === 'ring')!.cells;
+    const seed = (() => {
+      for (let s = 1; ; s++) if (line.every(c => !newGame(s).cells[c].chaos)) return s;
+    })();
+    const start = newGame(seed);
+    const O = [cell('back', 1, 1), cell('bottom', 1, 1), cell('left', 0, 0), cell('back', 0, 0)].filter(c => !line.includes(c));
+    const game = {
+      ...start,
+      cells: start.cells.map((c, i) => ({ ...c, mark: line.slice(0, 4).includes(i) ? ('X' as const) : O.includes(i) ? ('O' as const) : null })),
+    };
+    const storage = memoryStorage();
+    saveSettings(storage, { ...DEFAULT_SETTINGS, mode: 'two' });
+    saveGame(storage, { version: 1, game, mode: 'two', level: 'medium', human: 'X', log: ['New game.'] });
+    render(<App storage={storage} newSeed={() => seed} random={seededRandom(1)} aiDelayMs={0} />);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Continue game' }));
+    await waitFor(() => expect(scene.pick).not.toBeNull());
+    expect(scene.wins).toEqual([[null, true, false]]);
+
+    scene.pick!(line[4]);
+    await screen.findByText(/^Game over\. X wins/);
+    expect(scene.wins.at(-1)).toEqual([line, true, true]);
+
+    await user.click(screen.getByRole('button', { name: 'Fold back' }));
+    expect(scene.wins.at(-1)).toEqual([line, false, true]);
+    await user.click(screen.getByRole('button', { name: 'Unfold' }));
+    expect(scene.wins.at(-1)).toEqual([line, true, true]);
+
+    // Back from How to play: the net shows at once, with no replay.
+    await user.click(screen.getByRole('button', { name: 'How to play' }));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await waitFor(() => expect(scene.wins.at(-1)).toEqual([line, true, false]));
+
+    await user.click(screen.getByRole('button', { name: 'Play again' }));
+    await waitFor(() => expect(scene.wins.at(-1)).toEqual([null, true, true]));
+    expect(screen.queryByRole('button', { name: /Fold back|Unfold/ })).not.toBeInTheDocument();
   });
 });
