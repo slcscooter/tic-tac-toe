@@ -1,0 +1,79 @@
+# Chaos Cube tic-tac-toe: the rules
+
+These are the rules of record. Scott set them in an interview on 2026-11-24. The code, the tests
+and the AI follow this file. When the code and this file disagree, the code is wrong, or the rule
+needs Scott's decision. Never quietly change a rule to match the code.
+
+Items marked **Default** were not asked in the interview. They are Lucy's defaults, and Scott can
+overrule any of them.
+
+## The board
+
+- The board is the surface of a 3 by 3 Rubik's cube: 6 faces of 9 cells, so 54 cells.
+- The faces are Top, Bottom, Front, Back, Left and Right. A cell is named by face, row and column,
+  for example "Front, row 1, column 3". **Default.**
+- The screen shows the cube unfolded flat as a cross. It is fully playable by keyboard and screen
+  reader, and every move and rotation is announced.
+
+## Players and modes
+
+- Two players, X and O. X moves first. **Default** (carried over from the old game).
+- Against the AI, you choose who starts: you, the AI, or random.
+- The AI has three levels: Easy, Medium and Hard.
+- There is also a two-player mode for two people on one device.
+
+## A turn
+
+- On your turn, place one mark in any empty cell.
+- Players never rotate the cube on purpose. Only chaos cells rotate it.
+
+## Winning lines
+
+You win with 5 of your marks in a row along a line. A longer run also wins, because it contains 5
+in a row. There are two kinds of line.
+
+- **Straight rings.** Each row or column of a face continues straight around four faces of the
+  cube and closes into a loop of 12 cells. The cube has 9 rings. A run of 5 wraps over cube edges
+  and covers 2 or 3 faces. That gives 108 winning lines.
+- **Diagonals.** A 45-degree diagonal continues across a cube edge onto the next face. These
+  diagonals close into 8 loops of 9 cells. A run of 5 covers 3 or 4 faces. That gives 72 winning
+  lines.
+- **A diagonal stops at a cube corner**, where 3 faces meet. Each face's two corner-to-corner
+  diagonals run into a cube corner at both ends, so they are only 3 cells long and can never win.
+  So a face's center cell can only win along a straight ring.
+- In all, there are 180 winning lines. These counts come from a model script written during the
+  interview. The engine's tests must confirm them.
+
+## Chaos cells
+
+- At the start of a game, one hidden chaos cell is placed on each face, so 6 in all. It can be any
+  of the face's 9 cells, chosen at random. **Default** (center cells included).
+- Nobody can see where chaos cells are, and that includes the AI. The AI must not read their
+  positions, and a test must prove it.
+- A chaos cell belongs to its cell, like a sticker. When a rotation moves the cell, the chaos goes
+  with it, so a face can end up with no chaos cells or with two.
+- When you place a mark on a chaos cell:
+  1. Your mark is placed.
+  2. If that mark completes 5 in a row, you win at once and the chaos never runs.
+  3. Otherwise the chaos runs. The first chaos cell triggered in a game makes 1 random rotation,
+     the second makes 2, and so on, up to 6 rotations for the sixth.
+  4. That chaos cell is now spent.
+- Each rotation is a quarter turn, clockwise or counterclockwise, of one of the cube's 9 slices:
+  the 6 outer faces or the 3 middle slices. Both the slice and the direction are random. Marks and
+  hidden chaos cells move with their cells.
+- A rotation may undo the one before it. There is no rule against it. **Default.**
+
+## How a game ends
+
+Lines are checked after every placement, and again after the chaos rotations.
+
+- If only one player has 5 in a row, that player wins. That includes a line handed to the player
+  who did not trigger the chaos.
+- If a rotation gives both players 5 in a row at the same moment, the game is a draw.
+- If the board fills up with no line, the game is a draw.
+
+## Settled during the interview
+
+- The classic 3 by 3 game is replaced, not kept as a mode. Git history keeps it.
+- No AI can be unbeatable here, because hidden random chaos can beat any strategy. That is why the
+  AI has levels and the game has a two-player mode.
