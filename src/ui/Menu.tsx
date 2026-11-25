@@ -65,7 +65,7 @@ export function Menu({ settings, canContinue, onChange, onNewGame, onContinue, o
   return (
     <section className="menu" aria-labelledby="menu-heading">
       <h1 id="menu-heading" ref={heading} tabIndex={-1}>
-        Chaos Cube
+        Tic Tac Chaos
       </h1>
       <p>Tic-tac-toe on a Rubik&apos;s cube. Get 5 in a row, and watch out for hidden chaos cells.</p>
       <Radios legend="Players" name="mode" choices={MODES} value={settings.mode} onChange={mode => onChange({ ...settings, mode })} />

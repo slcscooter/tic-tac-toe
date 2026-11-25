@@ -1,4 +1,4 @@
-// Geometry of the Chaos Cube board: 54 cells on the surface of a 3x3x3 cube.
+// Geometry of the Tic Tac Chaos board: 54 cells on the surface of a 3x3x3 cube.
 // Rules of record: docs/game-rules.md.
 //
 // Coordinates: x points right, y points up, z points out of the Front face toward the viewer.

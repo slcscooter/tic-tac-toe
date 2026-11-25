@@ -61,7 +61,7 @@ async function noAxeViolations(container: HTMLElement) {
 describe('menu', () => {
   it('opens with its heading focused, so a screen reader starts there', () => {
     setup();
-    expect(screen.getByRole('heading', { name: 'Chaos Cube' })).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Tic Tac Chaos' })).toHaveFocus();
     expect(screen.queryByRole('button', { name: 'Continue game' })).not.toBeInTheDocument();
   });
 
@@ -317,6 +317,6 @@ describe('how to play', () => {
     expect(screen.getByRole('heading', { name: 'How to play', level: 1 })).toHaveFocus();
     await noAxeViolations(container);
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByRole('heading', { name: 'Chaos Cube' })).toHaveFocus();
+    expect(screen.getByRole('heading', { name: 'Tic Tac Chaos' })).toHaveFocus();
   });
 });

@@ -1,4 +1,4 @@
-# Chaos Cube tic-tac-toe: the rules
+# Tic Tac Chaos: the rules
 
 These are the rules of record. Scott set them in an interview on 2026-11-24. The code, the tests
 and the AI follow this file. When the code and this file disagree, the code is wrong, or the rule

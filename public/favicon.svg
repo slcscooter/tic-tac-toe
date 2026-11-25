@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Chaos Cube: a marble block with a blue X, on the game's near-black panel. -->
+  <!-- Tic Tac Chaos: a marble block with a blue X, on the game's near-black panel. -->
   <rect width="64" height="64" rx="12" fill="#141414"/>
   <rect x="10" y="10" width="44" height="44" rx="5" fill="#d8cdb4"/>
   <path d="M21 21 L43 43 M43 21 L21 43" stroke="#1d4ed8" stroke-width="8" stroke-linecap="round"/>

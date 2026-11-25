@@ -50,7 +50,7 @@ export function GameScreen(props: GameScreenProps) {
 
   return (
     <section className="game" aria-labelledby="game-heading">
-      <h1 id="game-heading">Chaos Cube</h1>
+      <h1 id="game-heading">Tic Tac Chaos</h1>
       <p className="status">{statusLine(game, players(session))}</p>
 
       {webgl && (

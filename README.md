@@ -1,4 +1,4 @@
-# Chaos Cube
+# Tic Tac Chaos
 
 Tic-tac-toe on a Rubik's cube. Get 5 in a row on the outside of the cube, across its edges and around
 its corners. Six hidden chaos cells turn slices of the cube when someone lands on one, moving marks

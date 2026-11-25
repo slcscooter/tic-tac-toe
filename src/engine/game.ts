@@ -1,4 +1,4 @@
-// Game rules for the Chaos Cube. Rules of record: docs/game-rules.md.
+// Game rules for Tic Tac Chaos. Rules of record: docs/game-rules.md.
 // Every function here is pure: it returns a new state and never changes the one it was given.
 
 import { applyTurn, CELL_COUNT, cellIndex, cellPosition, FACES, LINES, TURNS, WIN_LENGTH } from './cube';

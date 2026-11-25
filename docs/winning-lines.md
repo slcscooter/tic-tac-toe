@@ -1,6 +1,6 @@
 # Winning lines
 
-Every way to win on the Chaos Cube: 228 lines of 5 cells. Rules of record: [game-rules.md](game-rules.md).
+Every way to win in Tic Tac Chaos: 228 lines of 5 cells. Rules of record: [game-rules.md](game-rules.md).
 
 Cells are named by face and keypad number, as in the game: 1 is the top left of a face as it sits
 on the unfolded cross, 5 the center, 9 the bottom right. Line numbers match the order of `LINES`
