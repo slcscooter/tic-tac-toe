@@ -22,3 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Yarn 3. The pinned release in .yarn/releases is committed, as in everee-demo and
+# everee-webapp, so a clone gets the right yarn without corepack. The rest is local state.
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*

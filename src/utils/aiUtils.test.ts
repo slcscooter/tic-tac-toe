@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { getBestMove, minimax } from './aiUtils';
 import type { Board, Player } from '../types/game';
 

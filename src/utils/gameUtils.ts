@@ -50,11 +50,12 @@ export function createInitialGameState(startOption: StartOption): GameState {
       humanPlayer = 'O';
       aiPlayer = 'X';
       break;
-    case 'random':
+    case 'random': {
       const players: Player[] = Math.random() < 0.5 ? ['X', 'O'] : ['O', 'X'];
       humanPlayer = players[0];
       aiPlayer = players[1];
       break;
+    }
   }
 
   return {
