@@ -59,8 +59,8 @@ export function HowToPlay({ onBack }: { readonly onBack: () => void }) {
 
       <h2>AI levels</h2>
       <p>
-        Easy takes a win when it sees one and otherwise plays anywhere. Medium always blocks. Hard blocks and looks 3
-        moves ahead. Chaos can still swing any game.
+        Easy takes a win when it sees one and otherwise plays anywhere. Medium always blocks. Hard blocks, sets and
+        stops traps that make two ways to win at once, and looks 3 moves ahead. Chaos can still swing any game.
       </p>
 
       <button type="button" onClick={onBack}>

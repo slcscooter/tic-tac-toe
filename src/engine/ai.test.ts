@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { chooseMove, hint, seededRandom, toAiView, winningCells } from './ai';
+import { chooseMove, forkCells, hint, seededRandom, toAiView, winningCells } from './ai';
 import type { AiView, Level } from './ai';
-import { CELL_COUNT, LINES } from './cube';
+import { CELL_COUNT, LINES, cell, cornerVs } from './cube';
 import { newGame, placeMark } from './game';
 import type { GameState, Mark } from './game';
 
@@ -13,6 +13,16 @@ function view(X: readonly number[], O: readonly number[], me: Mark = 'X'): AiVie
 }
 
 const RING = LINES.find(l => l.kind === 'ring')!;
+// The corner V trap: the middle 4 of a V's 6 cells leave both ends open, two winning cells at once.
+const V = cornerVs()[0];
+const TRAP = V.slice(1, 5);
+// Move 6 of a Hard v Hard game (seed 1, no chaos) that X won on move 9 before Hard stopped traps:
+// X at Bottom 3 would hold Right 5, Right 7, Bottom 3 and Bottom 5 of a V, open at both ends.
+const TRAPPED = {
+  X: [cell('right', 1, 1), cell('bottom', 1, 1), cell('right', 2, 0)],
+  O: [cell('back', 1, 1), cell('left', 1, 1)],
+  trapCell: cell('bottom', 0, 2),
+};
 // A ring line that shares no cell with RING, for the other player's marks.
 const OTHER_RING = LINES.find(l => l.kind === 'ring' && l.cells.every(c => !RING.cells.includes(c)))!;
 
@@ -148,6 +158,38 @@ describe('Hard', () => {
   });
 });
 
+describe('the corner V trap', () => {
+  it('is a trap cell when 3 of its 4 are taken', () => {
+    const v = view(TRAP.slice(1), []);
+    expect(forkCells(v.marks, 'X')).toContain(TRAP[0]);
+    const after = v.marks.map((m, i) => (i === TRAP[0] ? 'X' : m));
+    expect(winningCells(after, 'X').sort((a, b) => a - b)).toEqual([V[0], V[5]].sort((a, b) => a - b));
+  });
+
+  it('is stopped by Hard before it is set, where Hard used to miss it', () => {
+    const v = view(TRAPPED.X, TRAPPED.O, 'O');
+    expect(forkCells(v.marks, 'X')).toEqual([TRAPPED.trapCell]);
+    for (let seed = 1; seed <= 5; seed++) {
+      const move = chooseMove(v, 'hard', seededRandom(seed))!;
+      const after = v.marks.map((m, i) => (i === move ? 'O' : m));
+      expect(forkCells(after, 'X')).toEqual([]);
+    }
+  });
+
+  it('no longer wins Hard v Hard on move 9 without chaos', () => {
+    // Before Hard stopped traps, X won all 30 of these games on move 9 (measured 2026-11-25).
+    for (let seed = 1; seed <= 5; seed++) {
+      const marks: (Mark | null)[] = Array(CELL_COUNT).fill(null);
+      const random = seededRandom(seed);
+      for (let move = 1; move <= 9; move++) {
+        const me: Mark = move % 2 ? 'X' : 'O';
+        marks[chooseMove({ marks, me, chaosTriggered: 0 }, 'hard', random)!] = me;
+        expect(LINES.some(l => l.cells.every(c => marks[c] !== null && marks[c] === marks[l.cells[0]]))).toBe(false);
+      }
+    }
+  });
+});
+
 // Whole games with real chaos. Seeded, so each run plays the same games. Thresholds sit below
 // the rates measured on 2026-11-24 over 30 games a pairing: Medium and Hard won 30 of 30 against
 // Easy; Hard won 27 of 30 as X and 21 of 30 as O against Medium.
@@ -185,6 +227,14 @@ describe('hint', () => {
     const [gap, held] = winningCells(view([], theirFour).marks, 'O');
     const v = view([held, ...RING.cells.slice(0, 2)], theirFour);
     expect(hint(v, seededRandom(1))).toEqual({ cell: gap, reason: 'block' });
+  });
+
+  it('says trap when the move makes two winning cells', () => {
+    expect(hint(view(TRAP.slice(1), [OTHER_RING.cells[0]]), seededRandom(1))).toEqual({ cell: TRAP[0], reason: 'trap' });
+  });
+
+  it('says stop-trap when the move stops theirs', () => {
+    expect(hint(view(TRAPPED.X, TRAPPED.O, 'O'), seededRandom(1))).toEqual({ cell: TRAPPED.trapCell, reason: 'stop-trap' });
   });
 
   it('says build otherwise, and gives nothing on a full board', () => {

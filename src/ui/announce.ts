@@ -107,6 +107,8 @@ export function statusLine(state: GameState, p: Players): string {
 const REASONS: Record<HintReason, string> = {
   win: 'win now at',
   block: 'block their line at',
+  trap: 'set a trap with two ways to win at',
+  'stop-trap': 'stop their trap at',
   build: 'build toward a line at',
 };
 

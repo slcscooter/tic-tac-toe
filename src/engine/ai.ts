@@ -64,6 +64,37 @@ export function winningCells(marks: readonly (Mark | null)[], who: Mark): number
   );
 }
 
+/**
+ * Empty cells where `who` would make two winning cells at once, a trap the other player can only
+ * block half of. Meant for when `who` has no winning cell yet; with one, they would just win.
+ */
+export function forkCells(marks: readonly (Mark | null)[], who: Mark): number[] {
+  return emptyCells(marks).filter(f => {
+    const wins = new Set<number>();
+    for (const l of CELL_LINES[f]) {
+      const { mine, theirs } = countIn(marks, l, who);
+      if (theirs !== 0 || mine !== WIN_LENGTH - 2) continue;
+      for (const c of LINES[l].cells) if (c !== f && marks[c] === null) wins.add(c);
+    }
+    return wins.size >= 2;
+  });
+}
+
+/** The empty cells that leave the opponent the fewest traps (forkCells) once `me` plays there. */
+function defenses(marks: readonly (Mark | null)[], me: Mark): Set<number> {
+  const open = emptyCells(marks);
+  if (forkCells(marks, other(me)).length === 0) return new Set(open);
+  const board = [...marks];
+  const left = new Map<number, number>();
+  for (const c of open) {
+    board[c] = me;
+    left.set(c, forkCells(board, other(me)).length);
+    board[c] = null;
+  }
+  const fewest = Math.min(...left.values());
+  return new Set(open.filter(c => left.get(c) === fewest));
+}
+
 // Value of a line holding k of one player's marks and none of the other's.
 const LINE_VALUE = [0, 1, 8, 64, 512, 1_000_000];
 
@@ -142,7 +173,8 @@ function search(marks: (Mark | null)[], toMove: Mark, depth: number, alpha: numb
  *
  * - Easy takes a win when it has one, and otherwise plays anywhere. It never blocks.
  * - Medium takes a win, always blocks, and otherwise picks among its 3 best cells.
- * - Hard takes a win, blocks, and otherwise looks 3 moves ahead.
+ * - Hard takes a win, blocks, sets a trap of two winning cells when it can, stops the opponent's
+ *   traps, and otherwise looks 3 moves ahead.
  */
 export function chooseMove(view: AiView, level: Level, random: Random): number | null {
   const { marks, me } = view;
@@ -162,8 +194,15 @@ export function chooseMove(view: AiView, level: Level, random: Random): number |
     return top[roll < 0.6 || top.length < 2 ? 0 : roll < 0.85 || top.length < 3 ? 1 : 2];
   }
 
+  const traps = forkCells(marks, me);
+  if (traps.length > 0) return pickBest(traps, c => cellValue(marks, c, me), random);
+
+  // The 3-move search can't see a trap coming: it is set on their next move and sprung 2 later.
+  const safe = defenses(marks, me);
   const board = [...marks];
-  const candidates = ranked(marks, me).slice(0, SEARCH_WIDTH);
+  const candidates = ranked(marks, me)
+    .filter(c => safe.has(c))
+    .slice(0, SEARCH_WIDTH);
   return pickBest(
     candidates,
     c => {
@@ -176,11 +215,15 @@ export function chooseMove(view: AiView, level: Level, random: Random): number |
   );
 }
 
-export type HintReason = 'win' | 'block' | 'build';
+export type HintReason = 'win' | 'block' | 'trap' | 'stop-trap' | 'build';
 
 export interface Hint {
   readonly cell: number;
-  /** win: completes your line now. block: stops their line. build: Hard's best move. */
+  /**
+   * win: completes your line now. block: stops their line. trap: makes two winning cells, and
+   * they can block only one. stop-trap: stops them making two winning cells. build: Hard's best
+   * move.
+   */
   readonly reason: HintReason;
 }
 
@@ -191,5 +234,7 @@ export function hint(view: AiView, random: Random): Hint | null {
   if (cellChoice === null) return null;
   if (wins.includes(cellChoice)) return { cell: cellChoice, reason: 'win' };
   if (winningCells(view.marks, other(view.me)).includes(cellChoice)) return { cell: cellChoice, reason: 'block' };
+  if (forkCells(view.marks, view.me).includes(cellChoice)) return { cell: cellChoice, reason: 'trap' };
+  if (forkCells(view.marks, other(view.me)).length > 0) return { cell: cellChoice, reason: 'stop-trap' };
   return { cell: cellChoice, reason: 'build' };
 }

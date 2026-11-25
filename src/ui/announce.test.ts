@@ -121,5 +121,7 @@ describe('start, status and hints', () => {
     expect(hintMessage('win', cell('back', 0, 0))).toBe('Hint: win now at Back 1.');
     expect(hintMessage('block', cell('bottom', 1, 1))).toBe('Hint: block their line at Bottom 5.');
     expect(hintMessage('build', cell('right', 2, 2))).toBe('Hint: build toward a line at Right 9.');
+    expect(hintMessage('trap', cell('top', 1, 1))).toBe('Hint: set a trap with two ways to win at Top 5.');
+    expect(hintMessage('stop-trap', cell('left', 0, 2))).toBe('Hint: stop their trap at Left 3.');
   });
 });
