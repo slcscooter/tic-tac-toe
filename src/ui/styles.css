@@ -12,8 +12,10 @@
   --focus: #1a1a1a;
   --button-bg: #1a1a1a;
   --button-text: #ffffff;
-  /* 12 cells across the widest row of the cross, plus about 80px of padding and gaps. */
-  --cell: clamp(20px, calc((100vw - 80px) / 12), 46px);
+  /* 12 cells across the widest row of the cross, plus about 80px of padding and gaps. Never under
+     24px, the WCAG 2.2 minimum target size: on a phone under about 370px wide the board scrolls
+     sideways inside its own box instead (see .board). */
+  --cell: clamp(24px, calc((100vw - 80px) / 12), 46px);
 
   color-scheme: light dark;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -166,6 +168,12 @@ fieldset label {
   justify-content: start;
   gap: 6px;
   margin: 16px 0;
+}
+
+/* Shown only without WebGL. On the narrowest phones the cross is wider than the screen, so it
+   scrolls sideways by itself rather than shrinking its cells or scrolling the whole page. */
+.board:not(.visually-hidden) {
+  overflow-x: auto;
 }
 
 .face-top { grid-column: 2; grid-row: 1; }
